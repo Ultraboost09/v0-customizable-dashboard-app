@@ -1,186 +1,174 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { useDashboardStore } from "@/lib/store"
-import { Play, Pause, SkipBack, SkipForward, Volume2, Music } from "lucide-react"
+import { Play, Pause, SkipBack, SkipForward, Music, Volume2 } from "lucide-react"
 
-interface SpotifyTrack {
-  name: string
+interface MediaState {
+  title: string
   artist: string
   album: string
-  albumArt: string
+  artwork: string
   isPlaying: boolean
-  progress: number
-  duration: number
 }
 
 export function MusicWidget() {
-  const { spotifyAccessToken, spotifyClientId } = useDashboardStore()
-  const [track, setTrack] = useState<SpotifyTrack | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const { nowPlaying, setNowPlaying } = useDashboardStore()
+  const [localMedia, setLocalMedia] = useState<MediaState | null>(null)
 
-  const fetchCurrentTrack = useCallback(async () => {
-    if (!spotifyAccessToken) return
-
-    try {
-      const response = await fetch("https://api.spotify.com/v1/me/player/currently-playing", {
-        headers: {
-          Authorization: `Bearer ${spotifyAccessToken}`,
-        },
-      })
-
-      if (response.status === 204) {
-        setTrack(null)
-        return
-      }
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch")
-      }
-
-      const data = await response.json()
-      
-      if (data.item) {
-        setTrack({
-          name: data.item.name,
-          artist: data.item.artists.map((a: { name: string }) => a.name).join(", "),
-          album: data.item.album.name,
-          albumArt: data.item.album.images[0]?.url || "",
-          isPlaying: data.is_playing,
-          progress: data.progress_ms,
-          duration: data.item.duration_ms,
-        })
-      }
-    } catch (err) {
-      setError("Unable to connect")
-    }
-  }, [spotifyAccessToken])
-
+  // Listen for Media Session API updates (detects media playing from browser/system)
   useEffect(() => {
-    if (spotifyAccessToken) {
-      fetchCurrentTrack()
-      const interval = setInterval(fetchCurrentTrack, 3000)
+    // Check if Media Session API is available
+    if ("mediaSession" in navigator) {
+      // Poll for media session metadata changes
+      const checkMediaSession = () => {
+        const session = navigator.mediaSession
+        if (session.metadata) {
+          const metadata = session.metadata
+          const newState: MediaState = {
+            title: metadata.title || "Unknown Track",
+            artist: metadata.artist || "Unknown Artist",
+            album: metadata.album || "",
+            artwork: metadata.artwork?.[0]?.src || "",
+            isPlaying: session.playbackState === "playing",
+          }
+          setLocalMedia(newState)
+          setNowPlaying({
+            ...newState,
+            isPlaying: session.playbackState === "playing",
+          })
+        }
+      }
+
+      // Check immediately and then poll
+      checkMediaSession()
+      const interval = setInterval(checkMediaSession, 1000)
+
       return () => clearInterval(interval)
     }
-  }, [spotifyAccessToken, fetchCurrentTrack])
+  }, [setNowPlaying])
 
-  const controlPlayback = async (action: "play" | "pause" | "next" | "previous") => {
-    if (!spotifyAccessToken) return
-
-    try {
-      const endpoint = action === "play" || action === "pause" 
-        ? `https://api.spotify.com/v1/me/player/${action}`
-        : `https://api.spotify.com/v1/me/player/${action}`
-
-      await fetch(endpoint, {
-        method: action === "play" || action === "pause" ? "PUT" : "POST",
-        headers: {
-          Authorization: `Bearer ${spotifyAccessToken}`,
-        },
+  // Try to control media playback
+  const controlPlayback = async (action: "play" | "pause" | "previoustrack" | "nexttrack") => {
+    // Media Session API action handlers
+    if ("mediaSession" in navigator) {
+      // Dispatch the action - this will be handled by the media player
+      const actionHandlers = navigator.mediaSession
+      
+      // Find and click the appropriate media control if available
+      const mediaElements = document.querySelectorAll("audio, video")
+      mediaElements.forEach((element) => {
+        const media = element as HTMLMediaElement
+        if (action === "play") {
+          media.play().catch(() => {})
+        } else if (action === "pause") {
+          media.pause()
+        }
       })
-
-      setTimeout(fetchCurrentTrack, 500)
-    } catch (err) {
-      console.error("Playback control failed:", err)
     }
   }
 
-  const formatTime = (ms: number) => {
-    const seconds = Math.floor(ms / 1000)
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, "0")}`
-  }
+  const displayData = localMedia || nowPlaying
 
-  // No token state
-  if (!spotifyAccessToken) {
+  // No media playing state
+  if (!displayData) {
     return (
-      <div className="h-full flex items-center justify-center p-4">
-        <div className="text-center">
-          <Music className="w-6 h-6 text-white/30 mx-auto mb-2" />
-          <p className="text-white/40 text-xs">
-            {spotifyClientId 
-              ? "Connect Spotify in settings"
-              : "Add Spotify Client ID in settings"}
-          </p>
+      <div className="h-full flex flex-col items-center justify-center p-4">
+        <div 
+          className="w-12 h-12 rounded-xl flex items-center justify-center mb-3"
+          style={{ background: "rgba(255,255,255,0.1)" }}
+        >
+          <Music className="w-6 h-6 text-white/40" />
+        </div>
+        <p className="text-white/60 text-xs font-medium">Now Playing</p>
+        <p className="text-white/30 text-[10px] mt-1 text-center">
+          Play media in your browser to see it here
+        </p>
+        
+        {/* Demo mode with visualizer bars */}
+        <div className="flex items-end gap-0.5 mt-4 h-6">
+          {[...Array(12)].map((_, i) => (
+            <div
+              key={i}
+              className="w-1 bg-white/20 rounded-full"
+              style={{
+                height: `${Math.random() * 100}%`,
+                minHeight: "4px",
+              }}
+            />
+          ))}
         </div>
       </div>
     )
   }
-
-  // No track playing
-  if (!track) {
-    return (
-      <div className="h-full flex items-center justify-center p-4">
-        <div className="text-center">
-          <Music className="w-6 h-6 text-white/30 mx-auto mb-2" />
-          <p className="text-white/40 text-xs">No track playing</p>
-        </div>
-      </div>
-    )
-  }
-
-  const progress = (track.progress / track.duration) * 100
 
   return (
-    <div className="h-full flex items-center gap-3 p-3">
-      {/* Album Art */}
-      {track.albumArt && (
-        <div className="w-14 h-14 rounded bg-white/10 flex-shrink-0 overflow-hidden">
-          <img 
-            src={track.albumArt} 
-            alt={track.album}
-            className="w-full h-full object-cover"
-          />
-        </div>
-      )}
-
-      {/* Track Info & Controls */}
-      <div className="flex-1 min-w-0">
-        <div className="text-white text-sm font-medium truncate">{track.name}</div>
-        <div className="text-white/50 text-xs truncate">{track.artist}</div>
-
-        {/* Progress Bar */}
-        <div className="mt-2 flex items-center gap-2">
-          <span className="text-[10px] text-white/40 tabular-nums">
-            {formatTime(track.progress)}
-          </span>
-          <div className="flex-1 h-1 bg-white/10 rounded-full">
-            <div 
-              className="h-full bg-green-500 rounded-full"
-              style={{ width: `${progress}%` }}
+    <div className="h-full flex flex-col p-3">
+      <div className="flex items-center gap-3 flex-1">
+        {/* Album Art */}
+        <div 
+          className="w-14 h-14 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center"
+          style={{ background: "rgba(255,255,255,0.1)" }}
+        >
+          {displayData.artwork ? (
+            <img 
+              src={displayData.artwork} 
+              alt={displayData.album}
+              className="w-full h-full object-cover"
+              crossOrigin="anonymous"
             />
-          </div>
-          <span className="text-[10px] text-white/40 tabular-nums">
-            {formatTime(track.duration)}
-          </span>
+          ) : (
+            <Music className="w-6 h-6 text-white/40" />
+          )}
         </div>
+
+        {/* Track Info */}
+        <div className="flex-1 min-w-0">
+          <div className="text-white text-sm font-medium truncate">{displayData.title}</div>
+          <div className="text-white/50 text-xs truncate">{displayData.artist}</div>
+          {displayData.album && (
+            <div className="text-white/30 text-[10px] truncate mt-0.5">{displayData.album}</div>
+          )}
+        </div>
+
+        {/* Playing indicator */}
+        {displayData.isPlaying && (
+          <div className="flex items-end gap-0.5 h-4">
+            <div className="w-0.5 bg-green-400 rounded-full animate-pulse" style={{ height: "60%", animationDelay: "0ms" }} />
+            <div className="w-0.5 bg-green-400 rounded-full animate-pulse" style={{ height: "100%", animationDelay: "150ms" }} />
+            <div className="w-0.5 bg-green-400 rounded-full animate-pulse" style={{ height: "40%", animationDelay: "300ms" }} />
+            <div className="w-0.5 bg-green-400 rounded-full animate-pulse" style={{ height: "80%", animationDelay: "450ms" }} />
+          </div>
+        )}
       </div>
 
       {/* Controls */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center justify-center gap-2 mt-3 pt-2 border-t border-white/10">
         <button 
-          onClick={() => controlPlayback("previous")}
-          className="p-1.5 hover:bg-white/10 rounded transition-colors"
+          onClick={() => controlPlayback("previoustrack")}
+          className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
         >
-          <SkipBack className="w-4 h-4 text-white" />
+          <SkipBack className="w-4 h-4 text-white/70" />
         </button>
         <button 
-          onClick={() => controlPlayback(track.isPlaying ? "pause" : "play")}
-          className="p-2 bg-white rounded-full hover:bg-white/90 transition-colors"
+          onClick={() => controlPlayback(displayData.isPlaying ? "pause" : "play")}
+          className="p-2.5 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
         >
-          {track.isPlaying ? (
-            <Pause className="w-4 h-4 text-black" />
+          {displayData.isPlaying ? (
+            <Pause className="w-4 h-4 text-white" />
           ) : (
-            <Play className="w-4 h-4 text-black ml-0.5" />
+            <Play className="w-4 h-4 text-white ml-0.5" />
           )}
         </button>
         <button 
-          onClick={() => controlPlayback("next")}
-          className="p-1.5 hover:bg-white/10 rounded transition-colors"
+          onClick={() => controlPlayback("nexttrack")}
+          className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
         >
-          <SkipForward className="w-4 h-4 text-white" />
+          <SkipForward className="w-4 h-4 text-white/70" />
         </button>
+        <div className="ml-2 flex items-center gap-1">
+          <Volume2 className="w-3 h-3 text-white/40" />
+        </div>
       </div>
     </div>
   )
