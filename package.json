@@ -27,12 +27,7 @@
   "public/icons/**/*",
   "package.json"
 ],
-    "extraResources": [
-      {
-        "from": "public",
-        "to": "public"
-      }
-    ],
+
     "mac": {
       "category": "public.app-category.productivity",
       "icon": "public/icon.png",
