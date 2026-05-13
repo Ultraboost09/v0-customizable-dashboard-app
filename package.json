@@ -23,12 +23,10 @@
       "output": "dist-electron"
     },
     "files": [
-      "electron/**/*",
-      "public/**/*",
-      ".next/**/*",
-      "node_modules/**/*",
-      "package.json"
-    ],
+  "electron/**/*",
+  "public/icons/**/*",
+  "package.json"
+],
     "extraResources": [
       {
         "from": "public",
