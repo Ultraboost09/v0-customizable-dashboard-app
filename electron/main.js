@@ -25,13 +25,13 @@ function createWindow() {
     backgroundColor: '#00000000',
   })
 
-  // Load the app
+  // Load the app - always load from the hosted Vercel URL
+  // This ensures Supabase auth works properly and data syncs across devices
+  const appUrl = isDev ? 'http://localhost:3000' : 'https://v0-customizable-dashboard-app.vercel.app'
+  mainWindow.loadURL(appUrl)
+  
   if (isDev) {
-    mainWindow.loadURL('http://localhost:3000')
     mainWindow.webContents.openDevTools()
-  } else {
-    // In production, load from the hosted URL or local build
-    mainWindow.loadURL('https://friday-dashboard.vercel.app')
   }
 
   mainWindow.on('closed', () => {
