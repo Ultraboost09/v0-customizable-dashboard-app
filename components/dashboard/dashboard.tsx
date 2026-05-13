@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useDashboardStore } from "@/lib/store"
+import { createClient } from "@/lib/supabase/client"
 import { RainEffect } from "./rain-effect"
 import { DraggableWidget } from "./draggable-widget"
 import { SettingsModal } from "./settings-modal"
@@ -18,7 +19,10 @@ import { NewsWidget } from "./widgets/news-widget"
 import { MusicWidget } from "./widgets/music-widget"
 import { QuickLinksWidget } from "./widgets/quicklinks-widget"
 import { SlidersWidget } from "./widgets/sliders-widget"
+import { SystemStatsWidget } from "./widgets/system-stats-widget"
 import { format } from "date-fns"
+import { LogOut, User } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 export function Dashboard() {
   const {
@@ -26,12 +30,32 @@ export function Dashboard() {
     homeWidgets,
     workWidgets,
     editMode,
+    loadFromSupabase,
+    setUserId,
     setSpotifyAccessToken,
   } = useDashboardStore()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const router = useRouter()
 
   const widgets = mode === "home" ? homeWidgets : workWidgets
+
+  useEffect(() => {
+    const supabase = createClient()
+    
+    const initUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setUserId(user.id)
+        setUserEmail(user.email || null)
+        await loadFromSupabase()
+      }
+    }
+    
+    initUser()
+    setMounted(true)
+  }, [setUserId, loadFromSupabase])
 
   // Handle Spotify OAuth callback
   useEffect(() => {
@@ -46,10 +70,11 @@ export function Dashboard() {
     }
   }, [setSpotifyAccessToken])
 
-  // Prevent hydration mismatch
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const handleSignOut = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push("/auth/login")
+  }
 
   if (!mounted) {
     return (
@@ -59,21 +84,6 @@ export function Dashboard() {
         </div>
       </div>
     )
-  }
-
-  const widgetSizes: Record<string, { width: number; height: number }> = {
-    clock: { width: 280, height: 120 },
-    calendar: { width: 220, height: 260 },
-    weather: { width: 180, height: 160 },
-    reminders: { width: 220, height: 200 },
-    notes: { width: 220, height: 200 },
-    timer: { width: 200, height: 280 },
-    pomodoro: { width: 260, height: 160 },
-    alarm: { width: 200, height: 200 },
-    news: { width: 280, height: 300 },
-    music: { width: 320, height: 80 },
-    quicklinks: { width: 400, height: 60 },
-    sliders: { width: 120, height: 200 },
   }
 
   const renderWidget = (type: string) => {
@@ -102,6 +112,8 @@ export function Dashboard() {
         return <QuickLinksWidget />
       case "sliders":
         return <SlidersWidget />
+      case "systemStats":
+        return <SystemStatsWidget />
       default:
         return null
     }
@@ -109,7 +121,7 @@ export function Dashboard() {
 
   return (
     <div className="fixed inset-0 overflow-hidden">
-      {/* Background Image */}
+      {/* Background Image - Misty blue mountains */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
@@ -117,26 +129,44 @@ export function Dashboard() {
         }}
       />
 
-      {/* Dark Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#1a2a4a]/40 via-[#1a2a4a]/30 to-[#1a2a4a]/60" />
+      {/* Dark blue overlay for dusk effect */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#1a2a4a]/50 via-[#2a3a5a]/40 to-[#1a2a4a]/70" />
 
       {/* Rain Effect */}
       <RainEffect />
 
-      {/* Glass Overlay */}
-      <div className="absolute inset-0 backdrop-blur-[1px]" />
+      {/* Frosted glass overlay */}
+      <div className="absolute inset-0 backdrop-blur-[2px]" />
 
-      {/* FRIDAY Title */}
+      {/* FRIDAY Title - Exact font match from reference image */}
       <div className="absolute top-12 left-1/2 -translate-x-1/2 z-30">
         <h1
-          className="text-5xl tracking-[0.4em] text-white/90 font-light"
+          className="text-white/95 font-medium select-none"
           style={{
-            fontFamily: "var(--font-orbitron), var(--font-rajdhani), sans-serif",
-            textShadow: "0 2px 30px rgba(0,0,0,0.4)",
+            fontFamily: "var(--font-orbitron), 'Rajdhani', sans-serif",
+            fontSize: "3.5rem",
+            letterSpacing: "0.35em",
+            textShadow: "0 4px 40px rgba(0,0,0,0.5)",
+            fontWeight: 400,
           }}
         >
           {format(new Date(), "EEEE").toUpperCase()}
         </h1>
+      </div>
+
+      {/* User info & Sign out */}
+      <div className="absolute top-4 left-4 z-30 flex items-center gap-3">
+        <div className="flex items-center gap-2 bg-white/10 backdrop-blur-xl rounded-full px-3 py-1.5 border border-white/20">
+          <User className="w-3.5 h-3.5 text-white/70" />
+          <span className="text-white/80 text-xs">{userEmail || "User"}</span>
+        </div>
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-1.5 bg-white/10 backdrop-blur-xl rounded-full px-3 py-1.5 border border-white/20 hover:bg-white/20 transition-colors"
+        >
+          <LogOut className="w-3.5 h-3.5 text-white/70" />
+          <span className="text-white/80 text-xs">Sign Out</span>
+        </button>
       </div>
 
       {/* Mode Switcher */}
@@ -146,8 +176,8 @@ export function Dashboard() {
 
       {/* Edit Mode Indicator */}
       {editMode && (
-        <div className="absolute top-4 left-4 z-30 bg-blue-500 text-white text-xs px-3 py-1.5 rounded-full">
-          Edit Mode - Drag widgets to reposition
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 bg-blue-500/90 backdrop-blur text-white text-xs px-4 py-2 rounded-full shadow-lg">
+          Edit Mode - Drag to move, corners to resize
         </div>
       )}
 
@@ -160,15 +190,11 @@ export function Dashboard() {
             id={widget.id}
             x={widget.x}
             y={widget.y}
+            width={widget.width}
+            height={widget.height}
+            widgetType={widget.type}
           >
-            <div
-              style={{
-                width: widgetSizes[widget.type]?.width || 200,
-                height: widgetSizes[widget.type]?.height || 150,
-              }}
-            >
-              {renderWidget(widget.type)}
-            </div>
+            {renderWidget(widget.type)}
           </DraggableWidget>
         ))}
 
