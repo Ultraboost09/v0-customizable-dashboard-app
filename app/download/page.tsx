@@ -1,305 +1,290 @@
 "use client"
 
-import { Monitor, Apple, Download, Music, Volume2, Sun, ArrowLeft, Check, Terminal, Github, Cpu, Zap, ExternalLink } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Download, Monitor, Apple, Check, Smartphone, Globe, Zap, Cloud, Bell, Layout, ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>
+}
+
+declare global {
+  interface WindowEventMap {
+    beforeinstallprompt: BeforeInstallPromptEvent
+  }
+}
 
 export default function DownloadPage() {
-  const [activeTab, setActiveTab] = useState<"download" | "build">("download")
-  
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [isInstalled, setIsInstalled] = useState(false)
+  const [isInstalling, setIsInstalling] = useState(false)
+  const [platform, setPlatform] = useState<"windows" | "mac" | "ios" | "android" | "other">("other")
+  const [browser, setBrowser] = useState<"chrome" | "edge" | "safari" | "firefox" | "other">("other")
+
+  useEffect(() => {
+    const ua = navigator.userAgent.toLowerCase()
+    
+    // Detect platform
+    if (ua.includes("win")) setPlatform("windows")
+    else if (ua.includes("mac") && !ua.includes("iphone") && !ua.includes("ipad")) setPlatform("mac")
+    else if (ua.includes("iphone") || ua.includes("ipad")) setPlatform("ios")
+    else if (ua.includes("android")) setPlatform("android")
+
+    // Detect browser
+    if (ua.includes("edg/")) setBrowser("edge")
+    else if (ua.includes("chrome")) setBrowser("chrome")
+    else if (ua.includes("safari") && !ua.includes("chrome")) setBrowser("safari")
+    else if (ua.includes("firefox")) setBrowser("firefox")
+
+    // Check if already installed as PWA
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      setIsInstalled(true)
+    }
+
+    // Listen for the install prompt
+    const handleBeforeInstall = (e: BeforeInstallPromptEvent) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+    }
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstall)
+    return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstall)
+  }, [])
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return
+    
+    setIsInstalling(true)
+    try {
+      await deferredPrompt.prompt()
+      const { outcome } = await deferredPrompt.userChoice
+      if (outcome === "accepted") {
+        setIsInstalled(true)
+      }
+    } finally {
+      setDeferredPrompt(null)
+      setIsInstalling(false)
+    }
+  }
+
   const features = [
-    {
-      icon: Music,
-      title: "Now Playing Integration",
-      description: "See what's playing from Spotify, Apple Music, YouTube, or any media app on your system",
-    },
-    {
-      icon: Volume2,
-      title: "System Volume Control",
-      description: "Adjust your system volume directly from the dashboard sliders",
-    },
-    {
-      icon: Sun,
-      title: "Screen Brightness",
-      description: "Control your display brightness without leaving the dashboard",
-    },
-    {
-      icon: Cpu,
-      title: "Real System Stats",
-      description: "Monitor your actual CPU, RAM, and disk usage in real-time",
-    },
+    { icon: Layout, title: "Full Dashboard", desc: "All widgets work exactly like the web" },
+    { icon: Cloud, title: "Cloud Sync", desc: "Data syncs across all your devices" },
+    { icon: Bell, title: "Notifications", desc: "Alarm and reminder alerts" },
+    { icon: Zap, title: "Instant Launch", desc: "Opens fast like a native app" },
   ]
 
-  const buildSteps = [
-    {
-      step: 1,
-      title: "Clone the Repository",
-      code: "git clone https://github.com/your-username/friday-dashboard.git\ncd friday-dashboard",
-    },
-    {
-      step: 2,
-      title: "Install Dependencies",
-      code: "pnpm install",
-    },
-    {
-      step: 3,
-      title: "Build for Your Platform",
-      code: "# For macOS:\npnpm electron:build:mac\n\n# For Windows:\npnpm electron:build:win\n\n# For Linux:\npnpm electron:build:linux",
-    },
-    {
-      step: 4,
-      title: "Find Your App",
-      code: "# The built app will be in:\n# dist-electron/\n#   - FRIDAY Dashboard.dmg (macOS)\n#   - FRIDAY Dashboard Setup.exe (Windows)\n#   - FRIDAY Dashboard.AppImage (Linux)",
-    },
-  ]
+  const getInstallInstructions = () => {
+    if (platform === "ios") {
+      return (
+        <ol className="space-y-3 text-white/80">
+          <li className="flex gap-3">
+            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">1</span>
+            <span>Tap the <strong>Share</strong> button at the bottom of Safari</span>
+          </li>
+          <li className="flex gap-3">
+            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">2</span>
+            <span>Scroll down and tap <strong>&quot;Add to Home Screen&quot;</strong></span>
+          </li>
+          <li className="flex gap-3">
+            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">3</span>
+            <span>Tap <strong>Add</strong> in the top right</span>
+          </li>
+        </ol>
+      )
+    }
+
+    if (platform === "android") {
+      return (
+        <ol className="space-y-3 text-white/80">
+          <li className="flex gap-3">
+            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">1</span>
+            <span>Tap the <strong>menu</strong> (three dots) in Chrome</span>
+          </li>
+          <li className="flex gap-3">
+            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">2</span>
+            <span>Tap <strong>&quot;Add to Home screen&quot;</strong></span>
+          </li>
+          <li className="flex gap-3">
+            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">3</span>
+            <span>Tap <strong>Add</strong></span>
+          </li>
+        </ol>
+      )
+    }
+
+    if (browser === "safari" && platform === "mac") {
+      return (
+        <ol className="space-y-3 text-white/80">
+          <li className="flex gap-3">
+            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">1</span>
+            <span>Click <strong>File</strong> in the menu bar</span>
+          </li>
+          <li className="flex gap-3">
+            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">2</span>
+            <span>Click <strong>&quot;Add to Dock&quot;</strong></span>
+          </li>
+          <li className="flex gap-3">
+            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">3</span>
+            <span>Click <strong>Add</strong> to install</span>
+          </li>
+        </ol>
+      )
+    }
+
+    if (browser === "chrome" || browser === "edge") {
+      return (
+        <ol className="space-y-3 text-white/80">
+          <li className="flex gap-3">
+            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">1</span>
+            <span>Look for the <strong>install icon</strong> in the address bar (right side)</span>
+          </li>
+          <li className="flex gap-3">
+            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">2</span>
+            <span>Click it and select <strong>&quot;Install&quot;</strong></span>
+          </li>
+          <li className="flex gap-3">
+            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">3</span>
+            <span>The app will open in its own window</span>
+          </li>
+        </ol>
+      )
+    }
+
+    return (
+      <ol className="space-y-3 text-white/80">
+        <li className="flex gap-3">
+          <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">1</span>
+          <span>Open the browser menu (three dots or lines)</span>
+        </li>
+        <li className="flex gap-3">
+          <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">2</span>
+          <span>Look for <strong>&quot;Install app&quot;</strong> or <strong>&quot;Add to Home Screen&quot;</strong></span>
+        </li>
+        <li className="flex gap-3">
+          <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">3</span>
+          <span>Follow the prompts to install</span>
+        </li>
+      </ol>
+    )
+  }
+
+  const getPlatformIcon = () => {
+    switch (platform) {
+      case "mac": return <Apple className="w-10 h-10" />
+      case "windows": return <Monitor className="w-10 h-10" />
+      case "ios": case "android": return <Smartphone className="w-10 h-10" />
+      default: return <Globe className="w-10 h-10" />
+    }
+  }
+
+  const getPlatformName = () => {
+    switch (platform) {
+      case "mac": return "macOS"
+      case "windows": return "Windows"
+      case "ios": return "iPhone/iPad"
+      case "android": return "Android"
+      default: return "Desktop"
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#1a2a4a] via-[#2a3a5a] to-[#1a2a4a]">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-[#1a2a4a] via-[#1e3a5f] to-[#1a2a4a] text-white">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative z-10 max-w-4xl mx-auto px-6 py-16">
-        {/* Back link */}
+      <div className="relative z-10 max-w-2xl mx-auto px-6 py-12">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-white/60 hover:text-white mb-12 transition-colors"
+          className="inline-flex items-center gap-2 text-white/60 hover:text-white mb-8 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Dashboard
         </Link>
 
-        {/* Header */}
-        <div className="text-center mb-16">
-          <h1
-            className="text-white text-5xl font-medium mb-4"
-            style={{
-              fontFamily: "var(--font-orbitron), sans-serif",
-              letterSpacing: "0.2em",
-            }}
+        <div className="text-center mb-10">
+          <h1 
+            className="text-4xl font-light tracking-[0.3em] mb-3"
+            style={{ fontFamily: "var(--font-orbitron)" }}
           >
             FRIDAY
           </h1>
-          <p className="text-white/60 text-xl mb-2">Desktop Application</p>
-          <p className="text-white/40 text-sm max-w-lg mx-auto">
-            Get the full desktop experience with system integration, media controls, and more.
-          </p>
+          <p className="text-white/60">Install as an app on your device</p>
         </div>
 
-        {/* Desktop app benefits */}
-        <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-8 mb-12">
-          <h2 className="text-white text-xl font-medium mb-6 text-center">Desktop Features</h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            {features.map((feature, index) => (
-              <div key={index} className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <feature.icon className="w-5 h-5 text-blue-400" />
-                </div>
-                <div>
-                  <h3 className="text-white font-medium mb-1">{feature.title}</h3>
-                  <p className="text-white/50 text-sm">{feature.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex justify-center mb-8">
-          <div className="bg-white/5 rounded-xl p-1 flex gap-1">
-            <button
-              onClick={() => setActiveTab("download")}
-              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === "download" 
-                  ? "bg-blue-500 text-white" 
-                  : "text-white/60 hover:text-white"
-              }`}
-            >
-              <Download className="w-4 h-4 inline mr-2" />
-              Download
-            </button>
-            <button
-              onClick={() => setActiveTab("build")}
-              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === "build" 
-                  ? "bg-blue-500 text-white" 
-                  : "text-white/60 hover:text-white"
-              }`}
-            >
-              <Terminal className="w-4 h-4 inline mr-2" />
-              Build from Source
-            </button>
-          </div>
-        </div>
-
-        {activeTab === "download" ? (
-          <>
-            {/* Download buttons */}
-            <div className="grid md:grid-cols-2 gap-6 mb-12">
-              {/* Windows */}
-              <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6 hover:bg-white/10 transition-colors">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-14 h-14 bg-blue-500/20 rounded-xl flex items-center justify-center">
-                    <Monitor className="w-7 h-7 text-blue-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-white text-lg font-medium">Windows</h3>
-                    <p className="text-white/50 text-sm">Windows 10 or later</p>
-                  </div>
-                </div>
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center gap-2 text-white/60 text-sm">
-                    <Check className="w-4 h-4 text-green-400" />
-                    <span>System media controls</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-white/60 text-sm">
-                    <Check className="w-4 h-4 text-green-400" />
-                    <span>Volume control</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-white/60 text-sm">
-                    <Check className="w-4 h-4 text-green-400" />
-                    <span>Native notifications</span>
-                  </div>
-                </div>
-                <a
-                  href="/api/download?platform=win"
-                  className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 px-6 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
-                >
-                  <Download className="w-5 h-5" />
-                  Download for Windows
-                </a>
-                <p className="text-white/30 text-xs text-center mt-2">v1.0.0 - Installer (.exe)</p>
-              </div>
-
-              {/* macOS */}
-              <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6 hover:bg-white/10 transition-colors">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-14 h-14 bg-white/10 rounded-xl flex items-center justify-center">
-                    <Apple className="w-7 h-7 text-white/80" />
-                  </div>
-                  <div>
-                    <h3 className="text-white text-lg font-medium">macOS</h3>
-                    <p className="text-white/50 text-sm">macOS 11 Big Sur or later</p>
-                  </div>
-                </div>
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center gap-2 text-white/60 text-sm">
-                    <Check className="w-4 h-4 text-green-400" />
-                    <span>Now Playing widget (Spotify, Apple Music)</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-white/60 text-sm">
-                    <Check className="w-4 h-4 text-green-400" />
-                    <span>Volume & brightness control</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-white/60 text-sm">
-                    <Check className="w-4 h-4 text-green-400" />
-                    <span>Real system stats</span>
-                  </div>
-                </div>
-                <a
-                  href="/api/download?platform=mac"
-                  className="w-full bg-white/10 hover:bg-white/20 text-white py-3 px-6 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
-                >
-                  <Download className="w-5 h-5" />
-                  Download for macOS
-                </a>
-                <p className="text-white/30 text-xs text-center mt-2">v1.0.0 - Universal Binary (.dmg)</p>
-              </div>
+        {/* Main Install Card */}
+        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/20">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500/30 to-purple-500/30 rounded-2xl flex items-center justify-center">
+              {getPlatformIcon()}
             </div>
-
-            {/* Note about building */}
-            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-center mb-8">
-              <p className="text-amber-200/80 text-sm">
-                <Zap className="w-4 h-4 inline mr-1" />
-                Pre-built binaries require code signing. For now, build from source or use the web version.
+            <div>
+              <h2 className="text-xl font-medium">Install for {getPlatformName()}</h2>
+              <p className="text-white/50 text-sm">
+                {isInstalled ? "Already installed on this device" : "Free, no app store needed"}
               </p>
             </div>
-          </>
-        ) : (
-          /* Build instructions */
-          <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-8 mb-12">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-white text-xl font-medium">Build from Source</h2>
-              <a
-                href="https://github.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-white/60 hover:text-white text-sm transition-colors"
-              >
-                <Github className="w-4 h-4" />
-                View on GitHub
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-
-            <div className="space-y-6">
-              {/* Prerequisites */}
-              <div className="bg-white/5 rounded-xl p-4">
-                <h3 className="text-white font-medium mb-2">Prerequisites</h3>
-                <ul className="text-white/60 text-sm space-y-1">
-                  <li>Node.js 18+ and pnpm installed</li>
-                  <li>Git installed</li>
-                  <li>macOS: Xcode Command Line Tools</li>
-                  <li>Windows: Visual Studio Build Tools</li>
-                </ul>
-              </div>
-
-              {/* Steps */}
-              {buildSteps.map((step) => (
-                <div key={step.step} className="border-l-2 border-blue-500/50 pl-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="w-6 h-6 bg-blue-500/20 rounded-full flex items-center justify-center text-blue-400 text-sm font-medium">
-                      {step.step}
-                    </span>
-                    <h3 className="text-white font-medium">{step.title}</h3>
-                  </div>
-                  <pre className="bg-black/40 rounded-lg p-3 text-white/80 text-sm overflow-x-auto font-mono">
-                    {step.code}
-                  </pre>
-                </div>
-              ))}
-
-              {/* Run in dev mode */}
-              <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-xl p-4 border border-green-500/30">
-                <h3 className="text-white font-medium mb-2 flex items-center gap-2">
-                  <Terminal className="w-4 h-4 text-green-400" />
-                  Quick Development Mode
-                </h3>
-                <p className="text-white/60 text-sm mb-3">
-                  Run the app in development mode without building:
-                </p>
-                <pre className="bg-black/40 rounded-lg p-3 text-green-300 text-sm font-mono">
-                  pnpm electron:dev
-                </pre>
-              </div>
-            </div>
           </div>
-        )}
 
-        {/* Web version note */}
-        <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl border border-white/10 p-6 text-center">
-          <h3 className="text-white font-medium mb-2">Prefer the Web Version?</h3>
-          <p className="text-white/50 text-sm mb-4">
-            The web version works great and syncs all your data across devices. 
-            The desktop app adds system-level integrations for media controls and hardware access.
-          </p>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors"
-          >
-            Continue using web version
-            <ArrowLeft className="w-4 h-4 rotate-180" />
-          </Link>
+          {isInstalled ? (
+            <div className="flex items-center gap-3 p-4 bg-green-500/20 rounded-xl border border-green-500/30">
+              <Check className="w-6 h-6 text-green-400 flex-shrink-0" />
+              <div>
+                <p className="font-medium text-green-400">FRIDAY is installed!</p>
+                <p className="text-sm text-white/60">Find it in your apps or dock</p>
+              </div>
+            </div>
+          ) : deferredPrompt ? (
+            <button
+              onClick={handleInstall}
+              disabled={isInstalling}
+              className="w-full py-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-xl font-medium text-lg flex items-center justify-center gap-3 transition-all disabled:opacity-50"
+            >
+              {isInstalling ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Installing...
+                </>
+              ) : (
+                <>
+                  <Download className="w-5 h-5" />
+                  Install Now
+                </>
+              )}
+            </button>
+          ) : (
+            <div className="bg-white/5 rounded-xl p-5 border border-white/10">
+              <p className="text-white/70 text-sm mb-4 font-medium">Follow these steps:</p>
+              {getInstallInstructions()}
+            </div>
+          )}
         </div>
 
-        {/* Technical info */}
-        <div className="mt-12 text-center">
-          <p className="text-white/30 text-xs">
-            Built with Electron for cross-platform support.
+        {/* Features */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          {features.map((f, i) => (
+            <div key={i} className="bg-white/5 rounded-xl p-4 border border-white/10">
+              <f.icon className="w-6 h-6 mb-2 text-blue-400" />
+              <h3 className="font-medium text-sm mb-0.5">{f.title}</h3>
+              <p className="text-xs text-white/50">{f.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Info note */}
+        <div className="bg-blue-500/10 rounded-xl p-4 border border-blue-500/20 text-center">
+          <p className="text-sm text-white/70">
+            This installs as a <strong>Progressive Web App</strong> - it works offline, 
+            syncs your data, and runs like a native application.
           </p>
         </div>
+
+        <p className="text-center text-white/30 text-xs mt-8">
+          Works on Windows, macOS, Linux, iOS, and Android
+        </p>
       </div>
     </div>
   )

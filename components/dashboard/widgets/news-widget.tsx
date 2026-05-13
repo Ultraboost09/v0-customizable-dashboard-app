@@ -16,17 +16,34 @@ type NewsCategory = "general" | "tech" | "sports"
 const RSS_FEEDS: Record<NewsCategory, { name: string; url: string }[]> = {
   general: [
     { name: "NPR", url: "https://feeds.npr.org/1001/rss.xml" },
-    { name: "AP News", url: "https://rsshub.app/apnews/topics/apf-topnews" },
-    { name: "USA Today", url: "https://rsshub.app/usatoday/news/nation" },
+    { name: "CNN", url: "http://rss.cnn.com/rss/cnn_topstories.rss" },
+    { name: "Fox News", url: "https://moxie.foxnews.com/google-publisher/latest.xml" },
+    { name: "NBC News", url: "https://feeds.nbcnews.com/nbcnews/public/news" },
+    { name: "ABC News", url: "https://abcnews.go.com/abcnews/topstories" },
+    { name: "CBS News", url: "https://www.cbsnews.com/latest/rss/main" },
+    { name: "Reuters", url: "https://www.reutersagency.com/feed/?taxonomy=best-topics&post_type=best" },
+    { name: "USA Today", url: "http://rssfeeds.usatoday.com/usatoday-NewsTopStories" },
+    { name: "NY Times", url: "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml" },
+    { name: "Washington Post", url: "https://feeds.washingtonpost.com/rss/national" },
   ],
   tech: [
     { name: "TechCrunch", url: "https://techcrunch.com/feed/" },
     { name: "The Verge", url: "https://www.theverge.com/rss/index.xml" },
     { name: "Ars Technica", url: "https://feeds.arstechnica.com/arstechnica/index" },
+    { name: "Wired", url: "https://www.wired.com/feed/rss" },
+    { name: "Engadget", url: "https://www.engadget.com/rss.xml" },
+    { name: "CNET", url: "https://www.cnet.com/rss/news/" },
+    { name: "Gizmodo", url: "https://gizmodo.com/rss" },
+    { name: "Mashable", url: "https://mashable.com/feeds/rss/all" },
   ],
   sports: [
     { name: "ESPN", url: "https://www.espn.com/espn/rss/news" },
     { name: "CBS Sports", url: "https://www.cbssports.com/rss/headlines/" },
+    { name: "Yahoo Sports", url: "https://sports.yahoo.com/rss/" },
+    { name: "Bleacher Report", url: "https://bleacherreport.com/articles/feed" },
+    { name: "Sports Illustrated", url: "https://www.si.com/rss/si_topstories.rss" },
+    { name: "NBC Sports", url: "https://www.nbcsports.com/rss/headlines" },
+    { name: "Fox Sports", url: "https://api.foxsports.com/v1/rss" },
   ],
 }
 
