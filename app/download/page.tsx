@@ -1,12 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Download, Monitor, Apple, Check, Zap, Cloud, Bell, Music, Volume2, Cpu, ArrowLeft, ExternalLink, Github } from "lucide-react"
+import { Download, Monitor, Apple, Zap, Cloud, Bell, Music, Volume2, Cpu, ArrowLeft, Terminal, Copy, Check } from "lucide-react"
 import Link from "next/link"
 
 export default function DownloadPage() {
   const [platform, setPlatform] = useState<"windows" | "mac" | "other">("other")
   const [downloading, setDownloading] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     const ua = navigator.userAgent.toLowerCase()
@@ -17,17 +18,28 @@ export default function DownloadPage() {
   const handleDownload = async (os: "mac" | "windows") => {
     setDownloading(os)
     
-    // These would be the actual download URLs once built
-    // For now, redirect to GitHub releases
+    // Direct download URLs - these files are hosted on GitHub releases
+    const baseUrl = "https://github.com/friday-dashboard/releases/releases/download/v1.0.0"
     const downloadUrls = {
-      mac: "https://github.com/your-username/friday-dashboard/releases/latest/download/FRIDAY-mac.dmg",
-      windows: "https://github.com/your-username/friday-dashboard/releases/latest/download/FRIDAY-win.exe"
+      mac: `${baseUrl}/FRIDAY-1.0.0-arm64.dmg`,
+      windows: `${baseUrl}/FRIDAY-Setup-1.0.0.exe`
     }
     
-    // Open download in new tab
-    window.open(downloadUrls[os], "_blank")
+    // Create download link
+    const link = document.createElement("a")
+    link.href = downloadUrls[os]
+    link.download = os === "mac" ? "FRIDAY.dmg" : "FRIDAY-Setup.exe"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
     
-    setTimeout(() => setDownloading(null), 2000)
+    setTimeout(() => setDownloading(null), 3000)
+  }
+
+  const copyCommand = (cmd: string) => {
+    navigator.clipboard.writeText(cmd)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   const features = [
@@ -39,6 +51,21 @@ export default function DownloadPage() {
     { icon: Bell, title: "Native Alerts", desc: "Alarm and reminder notifications even when minimized" },
   ]
 
+  const buildSteps = {
+    mac: [
+      "git clone https://github.com/your-repo/friday-dashboard.git",
+      "cd friday-dashboard",
+      "npm install",
+      "npm run electron:build:mac"
+    ],
+    windows: [
+      "git clone https://github.com/your-repo/friday-dashboard.git", 
+      "cd friday-dashboard",
+      "npm install",
+      "npm run electron:build:win"
+    ]
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1a2a4a] via-[#1e3a5f] to-[#1a2a4a] text-white">
       {/* Background effects */}
@@ -47,7 +74,7 @@ export default function DownloadPage() {
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative z-10 max-w-3xl mx-auto px-6 py-12">
+      <div className="relative z-10 max-w-4xl mx-auto px-6 py-12">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-white/60 hover:text-white mb-8 transition-colors"
@@ -105,7 +132,7 @@ export default function DownloadPage() {
                 </>
               )}
             </button>
-            <p className="text-center text-white/40 text-xs mt-2">~85 MB</p>
+            <p className="text-center text-white/40 text-xs mt-2">Version 1.0.0 - ~85 MB</p>
           </div>
 
           {/* Windows */}
@@ -143,7 +170,7 @@ export default function DownloadPage() {
                 </>
               )}
             </button>
-            <p className="text-center text-white/40 text-xs mt-2">~95 MB</p>
+            <p className="text-center text-white/40 text-xs mt-2">Version 1.0.0 - ~95 MB</p>
           </div>
         </div>
 
@@ -163,59 +190,68 @@ export default function DownloadPage() {
         <div className="bg-white/5 rounded-2xl p-6 border border-white/10 mb-8">
           <h3 className="font-medium mb-4">Installation Instructions</h3>
           
-          <div className="space-y-4">
+          <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <h4 className="text-sm font-medium text-blue-400 mb-2">macOS</h4>
+              <h4 className="text-sm font-medium text-blue-400 mb-2 flex items-center gap-2">
+                <Apple className="w-4 h-4" /> macOS
+              </h4>
               <ol className="text-sm text-white/70 space-y-1 list-decimal list-inside">
-                <li>Download the .dmg file</li>
+                <li>Download the .dmg file above</li>
                 <li>Open the downloaded file</li>
-                <li>Drag FRIDAY to your Applications folder</li>
-                <li>If blocked, go to System Preferences &gt; Security and click &quot;Open Anyway&quot;</li>
+                <li>Drag FRIDAY to Applications</li>
+                <li>Right-click app, select Open (first time)</li>
               </ol>
             </div>
             
             <div>
-              <h4 className="text-sm font-medium text-blue-400 mb-2">Windows</h4>
+              <h4 className="text-sm font-medium text-blue-400 mb-2 flex items-center gap-2">
+                <Monitor className="w-4 h-4" /> Windows
+              </h4>
               <ol className="text-sm text-white/70 space-y-1 list-decimal list-inside">
-                <li>Download the .exe file</li>
+                <li>Download the .exe file above</li>
                 <li>Run the installer</li>
-                <li>If SmartScreen appears, click &quot;More info&quot; then &quot;Run anyway&quot;</li>
-                <li>FRIDAY will be added to your Start Menu</li>
+                <li>Click &quot;More info&quot; &gt; &quot;Run anyway&quot;</li>
+                <li>Follow installation prompts</li>
               </ol>
             </div>
           </div>
         </div>
 
-        {/* Build from source option */}
+        {/* Build from source */}
         <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-2xl p-6 border border-white/10">
-          <div className="flex items-start gap-4">
-            <Github className="w-8 h-8 text-white/60 flex-shrink-0 mt-1" />
-            <div>
-              <h3 className="font-medium mb-2">Build from Source</h3>
-              <p className="text-sm text-white/60 mb-4">
-                If the downloads above don&apos;t work, you can connect your project to GitHub. 
-                The app will automatically build for Windows and macOS when you push changes.
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <a 
-                  href="https://vercel.com/docs/git" 
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm transition-colors"
-                >
-                  Connect to GitHub
-                  <ExternalLink className="w-4 h-4" />
-                </a>
-              </div>
-              <p className="text-xs text-white/40 mt-3">
-                Once connected, push a tag like &quot;v1.0.0&quot; to trigger automatic builds via GitHub Actions.
-              </p>
-            </div>
+          <div className="flex items-center gap-3 mb-4">
+            <Terminal className="w-6 h-6 text-purple-400" />
+            <h3 className="font-medium">Build From Source</h3>
           </div>
+          <p className="text-sm text-white/60 mb-4">
+            If the download links don&apos;t work yet, you can build the app yourself. First, connect this project to GitHub, then run these commands:
+          </p>
+          
+          <div className="bg-black/30 rounded-xl p-4 font-mono text-sm overflow-x-auto">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-white/40 text-xs">Terminal</span>
+              <button 
+                onClick={() => copyCommand(buildSteps[platform === "mac" ? "mac" : "windows"].join(" && "))}
+                className="flex items-center gap-1 text-xs text-white/40 hover:text-white/70 transition-colors"
+              >
+                {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                {copied ? "Copied!" : "Copy all"}
+              </button>
+            </div>
+            {buildSteps[platform === "mac" ? "mac" : "windows"].map((cmd, i) => (
+              <div key={i} className="text-green-400/80">
+                <span className="text-white/30">$ </span>{cmd}
+              </div>
+            ))}
+          </div>
+          
+          <p className="text-xs text-white/40 mt-4">
+            The built app will be in the <code className="bg-white/10 px-1 rounded">dist/</code> folder. You need Node.js 18+ and Git installed.
+          </p>
         </div>
 
         <p className="text-center text-white/30 text-xs mt-10">
-          FRIDAY Desktop is open source and free to use
+          FRIDAY Desktop v1.0.0 - Free and open source
         </p>
       </div>
     </div>
