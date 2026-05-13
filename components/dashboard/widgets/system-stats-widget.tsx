@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Cpu, HardDrive, MemoryStick, Download } from "lucide-react"
+import { Cpu, HardDrive, MemoryStick, Download, CheckCircle } from "lucide-react"
 
 export function SystemStatsWidget() {
   const [stats, setStats] = useState({
@@ -9,28 +9,50 @@ export function SystemStatsWidget() {
     ram: 26,
     hdd: 22,
   })
+  const [isElectron, setIsElectron] = useState(false)
 
-  // Simulated stats - in a real desktop app (Electron/Tauri),
-  // you would hook into system APIs here
   useEffect(() => {
-    const interval = setInterval(() => {
-      setStats({
-        cpu: Math.floor(Math.random() * 15),
-        ram: 20 + Math.floor(Math.random() * 20),
-        hdd: 20 + Math.floor(Math.random() * 10),
-      })
-    }, 2000)
-
-    return () => clearInterval(interval)
+    const checkElectron = async () => {
+      if (window.electronAPI?.isElectron) {
+        setIsElectron(true)
+        
+        // Fetch real system stats
+        const fetchStats = async () => {
+          const systemStats = await window.electronAPI!.getSystemStats()
+          setStats({
+            cpu: systemStats.cpu,
+            ram: systemStats.memory,
+            hdd: systemStats.disk,
+          })
+        }
+        
+        fetchStats()
+        const interval = setInterval(fetchStats, 2000)
+        return () => clearInterval(interval)
+      } else {
+        // Simulated stats for web preview
+        const interval = setInterval(() => {
+          setStats({
+            cpu: Math.floor(Math.random() * 15),
+            ram: 20 + Math.floor(Math.random() * 20),
+            hdd: 20 + Math.floor(Math.random() * 10),
+          })
+        }, 2000)
+        return () => clearInterval(interval)
+      }
+    }
+    
+    checkElectron()
   }, [])
 
   return (
     <div className="h-full w-full flex flex-col p-3 gap-2 overflow-hidden">
       <div 
-        className="text-white/50 uppercase tracking-wider"
+        className="text-white/50 uppercase tracking-wider flex items-center gap-1"
         style={{ fontSize: "clamp(0.5rem, 1.5vw, 0.625rem)" }}
       >
         System
+        {isElectron && <CheckCircle className="w-2.5 h-2.5 text-green-400" />}
       </div>
       
       <div className="flex-1 flex flex-col gap-2 justify-center min-h-0">
@@ -62,15 +84,17 @@ export function SystemStatsWidget() {
         </div>
       </div>
 
-      {/* Desktop app hint */}
-      <a 
-        href="/download"
-        className="flex items-center justify-center gap-1 text-white/30 hover:text-white/50 transition-colors pt-1 border-t border-white/10"
-        style={{ fontSize: "clamp(0.45rem, 1vw, 0.5rem)" }}
-      >
-        <Download className="w-2.5 h-2.5" />
-        Real stats in desktop app
-      </a>
+      {/* Desktop app hint - only show in browser */}
+      {!isElectron && (
+        <a 
+          href="/download"
+          className="flex items-center justify-center gap-1 text-white/30 hover:text-white/50 transition-colors pt-1 border-t border-white/10"
+          style={{ fontSize: "clamp(0.45rem, 1vw, 0.5rem)" }}
+        >
+          <Download className="w-2.5 h-2.5" />
+          Real stats in desktop app
+        </a>
+      )}
     </div>
   )
 }

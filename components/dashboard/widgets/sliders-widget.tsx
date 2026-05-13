@@ -1,10 +1,51 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { useDashboardStore } from "@/lib/store"
 import { Volume2, Sun } from "lucide-react"
 
 export function SlidersWidget() {
   const { volume, brightness, setVolume, setBrightness } = useDashboardStore()
+  const [isElectron, setIsElectron] = useState(false)
+
+  // Check if running in Electron and sync system values
+  useEffect(() => {
+    const checkElectron = async () => {
+      if (window.electronAPI?.isElectron) {
+        setIsElectron(true)
+        
+        // Get actual system volume and brightness
+        const systemVolume = await window.electronAPI.getVolume()
+        const systemBrightness = await window.electronAPI.getBrightness()
+        
+        setVolume(systemVolume)
+        setBrightness(systemBrightness)
+      }
+    }
+    
+    checkElectron()
+  }, [setVolume, setBrightness])
+
+  const handleVolumeChange = async (newVolume: number) => {
+    setVolume(newVolume)
+    
+    if (window.electronAPI?.isElectron) {
+      // Actually change system volume
+      await window.electronAPI.setVolume(newVolume)
+    }
+  }
+
+  const handleBrightnessChange = async (newBrightness: number) => {
+    setBrightness(newBrightness)
+    
+    if (window.electronAPI?.isElectron) {
+      // Actually change system brightness
+      await window.electronAPI.setBrightness(newBrightness)
+    } else {
+      // For web preview, simulate with CSS filter
+      document.body.style.filter = `brightness(${0.5 + (newBrightness / 200)})`
+    }
+  }
 
   return (
     <div className="h-full w-full flex items-center justify-center gap-4 p-3 overflow-hidden">
@@ -21,10 +62,7 @@ export function SlidersWidget() {
             min="0"
             max="100"
             value={volume}
-            onChange={(e) => {
-              const newVolume = parseInt(e.target.value)
-              setVolume(newVolume)
-            }}
+            onChange={(e) => handleVolumeChange(parseInt(e.target.value))}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer appearance-none"
             style={{
               writingMode: "vertical-lr",
@@ -38,6 +76,11 @@ export function SlidersWidget() {
         >
           {volume}%
         </span>
+        {isElectron && (
+          <span className="text-green-400/60" style={{ fontSize: "clamp(0.4rem, 1vw, 0.5rem)" }}>
+            System
+          </span>
+        )}
       </div>
 
       {/* Brightness Slider */}
@@ -53,13 +96,7 @@ export function SlidersWidget() {
             min="0"
             max="100"
             value={brightness}
-            onChange={(e) => {
-              const newBrightness = parseInt(e.target.value)
-              setBrightness(newBrightness)
-              
-              // For web preview, simulate with CSS filter
-              document.body.style.filter = `brightness(${0.5 + (newBrightness / 200)})`
-            }}
+            onChange={(e) => handleBrightnessChange(parseInt(e.target.value))}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer appearance-none"
             style={{
               writingMode: "vertical-lr",
@@ -73,6 +110,11 @@ export function SlidersWidget() {
         >
           {brightness}%
         </span>
+        {isElectron && (
+          <span className="text-green-400/60" style={{ fontSize: "clamp(0.4rem, 1vw, 0.5rem)" }}>
+            System
+          </span>
+        )}
       </div>
     </div>
   )
