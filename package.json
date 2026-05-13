@@ -11,11 +11,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "electron:dev": "concurrently \"cross-env NODE_ENV=development next dev\" \"wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .\"",
     "electron:build": "electron-builder",
-"electron:build": "electron-builder",
-"electron:build:win": "electron-builder --win",
-"electron:build:mac": "electron-builder --mac",
-"electron:build:linux": "electron-builder --linux"
+    "electron:build:win": "electron-builder --win",
+    "electron:build:mac": "electron-builder --mac",
+    "electron:build:linux": "electron-builder --linux"
+  },
   "build": {
     "appId": "com.friday.dashboard",
     "productName": "FRIDAY Dashboard",
@@ -23,11 +24,10 @@
       "output": "dist-electron"
     },
     "files": [
-  "electron/**/*",
-  "public/icons/**/*",
-  "package.json"
-],
-
+      "electron/**/*",
+      "public/icons/**/*",
+      "package.json"
+    ],
     "mac": {
       "category": "public.app-category.productivity",
       "icon": "public/icon.png",
