@@ -14,7 +14,6 @@ export function TimerWidget() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
-    // Create audio element for alarm
     audioRef.current = new Audio("data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleQAHj+HimH0AAH/f45uAAABx2+CaewAAadjem3sAAGba3Jl7AABj2NqWegAAYNXYlHgAAF3S1ZF2AABaztKOdAAAV8rPi3IAAFXE" )
   }, [])
 
@@ -84,17 +83,18 @@ export function TimerWidget() {
   const circumference = 2 * Math.PI * 70
 
   return (
-    <div className="h-full flex flex-col items-center justify-center p-4">
+    <div className="h-full w-full flex flex-col items-center justify-center p-3 overflow-hidden">
       {/* Mode Toggle */}
-      <div className="flex gap-2 mb-3">
+      <div className="flex gap-2 mb-2 flex-shrink-0">
         <button
           onClick={() => {
             setMode("timer")
             setIsRunning(false)
           }}
-          className={`text-[10px] px-2 py-0.5 rounded ${
+          className={`px-2 py-0.5 rounded ${
             mode === "timer" ? "bg-white/20 text-white" : "text-white/50"
           }`}
+          style={{ fontSize: "clamp(0.5rem, 1.5vw, 0.625rem)" }}
         >
           Timer
         </button>
@@ -103,17 +103,18 @@ export function TimerWidget() {
             setMode("stopwatch")
             setIsRunning(false)
           }}
-          className={`text-[10px] px-2 py-0.5 rounded ${
+          className={`px-2 py-0.5 rounded ${
             mode === "stopwatch" ? "bg-white/20 text-white" : "text-white/50"
           }`}
+          style={{ fontSize: "clamp(0.5rem, 1.5vw, 0.625rem)" }}
         >
           Stopwatch
         </button>
       </div>
 
-      {/* Circular Timer */}
-      <div className="relative">
-        <svg width="160" height="160" className="transform -rotate-90">
+      {/* Circular Timer - scales with container */}
+      <div className="relative flex-1 flex items-center justify-center min-h-0 w-full max-h-[140px]">
+        <svg viewBox="0 0 160 160" className="transform -rotate-90 w-full h-full max-w-[140px]">
           <circle
             cx="80"
             cy="80"
@@ -140,7 +141,10 @@ export function TimerWidget() {
 
         {/* Time Display */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-3xl font-light text-white tabular-nums">
+          <span 
+            className="font-light text-white tabular-nums"
+            style={{ fontSize: "clamp(1.25rem, 5vw, 2rem)" }}
+          >
             {mode === "timer" ? formatTime(timeLeft) : formatTime(stopwatchTime)}
           </span>
         </div>
@@ -148,28 +152,33 @@ export function TimerWidget() {
 
       {/* Time Adjusters */}
       {mode === "timer" && !isRunning && (
-        <div className="flex items-center gap-4 mt-2">
+        <div className="flex items-center gap-3 mt-1 flex-shrink-0">
           <button
             onClick={() => adjustTime(-1)}
             className="p-1 hover:bg-white/10 rounded transition-colors"
           >
-            <Minus className="w-4 h-4 text-white/60" />
+            <Minus className="w-3 h-3 text-white/60" />
           </button>
-          <span className="text-white/60 text-xs">{timerMinutes} min</span>
+          <span 
+            className="text-white/60"
+            style={{ fontSize: "clamp(0.6rem, 1.5vw, 0.75rem)" }}
+          >
+            {timerMinutes} min
+          </span>
           <button
             onClick={() => adjustTime(1)}
             className="p-1 hover:bg-white/10 rounded transition-colors"
           >
-            <Plus className="w-4 h-4 text-white/60" />
+            <Plus className="w-3 h-3 text-white/60" />
           </button>
         </div>
       )}
 
       {/* Controls */}
-      <div className="flex gap-3 mt-3">
+      <div className="flex gap-2 mt-2 flex-shrink-0">
         <button
           onClick={() => setIsRunning(!isRunning)}
-          className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+          className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
         >
           {isRunning ? (
             <Pause className="w-4 h-4 text-white" />
@@ -179,7 +188,7 @@ export function TimerWidget() {
         </button>
         <button
           onClick={reset}
-          className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+          className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
         >
           <RotateCcw className="w-4 h-4 text-white" />
         </button>

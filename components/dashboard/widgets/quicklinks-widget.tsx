@@ -23,26 +23,29 @@ import {
   Facebook,
 } from "lucide-react"
 
-const iconMap: Record<string, React.ReactNode> = {
-  github: <Github className="w-5 h-5" />,
-  twitter: <Twitter className="w-5 h-5" />,
-  youtube: <Youtube className="w-5 h-5" />,
-  music: <Music className="w-5 h-5" />,
-  mail: <Mail className="w-5 h-5" />,
-  globe: <Globe className="w-5 h-5" />,
-  chrome: <Chrome className="w-5 h-5" />,
-  file: <FileText className="w-5 h-5" />,
-  image: <Image className="w-5 h-5" />,
-  folder: <Folder className="w-5 h-5" />,
-  terminal: <Terminal className="w-5 h-5" />,
-  code: <Code className="w-5 h-5" />,
-  slack: <Slack className="w-5 h-5" />,
-  linkedin: <Linkedin className="w-5 h-5" />,
-  instagram: <Instagram className="w-5 h-5" />,
-  facebook: <Facebook className="w-5 h-5" />,
+const getIconComponent = (iconName: string, size: string = "w-5 h-5") => {
+  const iconMap: Record<string, React.ReactNode> = {
+    github: <Github className={size} />,
+    twitter: <Twitter className={size} />,
+    youtube: <Youtube className={size} />,
+    music: <Music className={size} />,
+    mail: <Mail className={size} />,
+    globe: <Globe className={size} />,
+    chrome: <Chrome className={size} />,
+    file: <FileText className={size} />,
+    image: <Image className={size} />,
+    folder: <Folder className={size} />,
+    terminal: <Terminal className={size} />,
+    code: <Code className={size} />,
+    slack: <Slack className={size} />,
+    linkedin: <Linkedin className={size} />,
+    instagram: <Instagram className={size} />,
+    facebook: <Facebook className={size} />,
+  }
+  return iconMap[iconName] || <Globe className={size} />
 }
 
-const availableIcons = Object.keys(iconMap)
+const availableIcons = ["github", "twitter", "youtube", "music", "mail", "globe", "chrome", "file", "image", "folder", "terminal", "code", "slack", "linkedin", "instagram", "facebook"]
 
 export function QuickLinksWidget() {
   const { quickLinks, addQuickLink, removeQuickLink } = useDashboardStore()
@@ -66,7 +69,7 @@ export function QuickLinksWidget() {
   }
 
   return (
-    <div className="h-full flex items-center gap-2 p-2">
+    <div className="h-full w-full flex items-center gap-2 p-2 overflow-x-auto overflow-y-hidden">
       {/* Quick Links */}
       {quickLinks.map((link) => (
         <a
@@ -74,11 +77,15 @@ export function QuickLinksWidget() {
           href={link.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-10 h-10 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all group relative"
+          className="rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all group relative flex-shrink-0"
+          style={{ 
+            width: "clamp(32px, 8vw, 44px)", 
+            height: "clamp(32px, 8vw, 44px)" 
+          }}
           title={link.name}
         >
           <span className="text-white/70 group-hover:text-white">
-            {iconMap[link.icon] || <Globe className="w-5 h-5" />}
+            {getIconComponent(link.icon, "w-4 h-4")}
           </span>
           <button
             onClick={(e) => {
@@ -95,26 +102,29 @@ export function QuickLinksWidget() {
 
       {/* Add Button / Form */}
       {showAdd ? (
-        <div className="flex items-center gap-2 p-2 bg-white/10 rounded-lg">
+        <div className="flex items-center gap-2 p-2 bg-white/10 rounded-lg flex-shrink-0">
           <input
             type="text"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Name"
-            className="w-16 bg-transparent text-white text-xs placeholder-white/40 outline-none"
+            className="w-14 bg-transparent text-white placeholder-white/40 outline-none"
+            style={{ fontSize: "clamp(0.6rem, 1.5vw, 0.75rem)" }}
           />
           <input
             type="text"
             value={newUrl}
             onChange={(e) => setNewUrl(e.target.value)}
             placeholder="URL"
-            className="w-24 bg-transparent text-white text-xs placeholder-white/40 outline-none"
+            className="w-20 bg-transparent text-white placeholder-white/40 outline-none"
+            style={{ fontSize: "clamp(0.6rem, 1.5vw, 0.75rem)" }}
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
           />
           <select
             value={newIcon}
             onChange={(e) => setNewIcon(e.target.value)}
-            className="bg-white/10 text-white text-xs rounded px-1 py-0.5 outline-none"
+            className="bg-white/10 text-white rounded px-1 py-0.5 outline-none"
+            style={{ fontSize: "clamp(0.55rem, 1.2vw, 0.65rem)" }}
           >
             {availableIcons.map((icon) => (
               <option key={icon} value={icon} className="bg-gray-800">
@@ -138,7 +148,11 @@ export function QuickLinksWidget() {
       ) : (
         <button
           onClick={() => setShowAdd(true)}
-          className="w-10 h-10 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors border border-dashed border-white/20"
+          className="rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors border border-dashed border-white/20 flex-shrink-0"
+          style={{ 
+            width: "clamp(32px, 8vw, 44px)", 
+            height: "clamp(32px, 8vw, 44px)" 
+          }}
         >
           <Plus className="w-4 h-4 text-white/40" />
         </button>

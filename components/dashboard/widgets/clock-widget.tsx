@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Power, RotateCcw, Settings } from "lucide-react"
 import { format } from "date-fns"
 
 interface ClockWidgetProps {
@@ -16,17 +15,19 @@ export function ClockWidget({ onSettingsClick }: ClockWidgetProps) {
     return () => clearInterval(interval)
   }, [])
 
-  const hours = format(time, "HH")
+  // 12-hour format
+  const hours = format(time, "h")
   const minutes = format(time, "mm")
   const seconds = format(time, "ss")
+  const ampm = format(time, "a")
   const dayName = format(time, "EEEE")
   const dateStr = format(time, "MMMM d")
 
   return (
-    <div className="h-full flex flex-col justify-center p-4">
-      <div className="flex items-start gap-4">
+    <div className="h-full w-full flex flex-col justify-center p-4 overflow-hidden">
+      <div className="flex items-start gap-3 min-w-0">
         {/* System Icons */}
-        <div className="flex flex-col gap-2 pt-2">
+        <div className="flex flex-col gap-2 pt-2 flex-shrink-0">
           <button className="w-2 h-2 rounded-full bg-white/30 hover:bg-white/50 transition-colors" title="Power" />
           <button className="w-2 h-2 rounded-full bg-white/30 hover:bg-white/50 transition-colors" title="Restart" />
           <button 
@@ -36,17 +37,32 @@ export function ClockWidget({ onSettingsClick }: ClockWidgetProps) {
           />
         </div>
 
-        {/* Time Display */}
-        <div className="flex flex-col">
-          <div className="flex items-baseline">
-            <span className="text-6xl font-light tracking-tight text-white tabular-nums">
+        {/* Time Display - scales with container */}
+        <div className="flex flex-col min-w-0 flex-1">
+          <div className="flex items-baseline flex-wrap">
+            <span 
+              className="font-light tracking-tight text-white tabular-nums"
+              style={{ fontSize: "clamp(2rem, 8vw, 4rem)" }}
+            >
               {hours}:{minutes}
             </span>
-            <span className="text-2xl font-light text-white/70 ml-1 tabular-nums">
+            <span 
+              className="font-light text-white/70 ml-1 tabular-nums"
+              style={{ fontSize: "clamp(1rem, 3vw, 1.75rem)" }}
+            >
               {seconds}
             </span>
+            <span 
+              className="font-medium text-white/60 ml-2 uppercase"
+              style={{ fontSize: "clamp(0.75rem, 2vw, 1.25rem)" }}
+            >
+              {ampm}
+            </span>
           </div>
-          <span className="text-white/70 text-sm mt-1">
+          <span 
+            className="text-white/70 mt-1 truncate"
+            style={{ fontSize: "clamp(0.65rem, 2vw, 0.875rem)" }}
+          >
             {dayName}, {dateStr}
           </span>
         </div>

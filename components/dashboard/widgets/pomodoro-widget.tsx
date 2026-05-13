@@ -39,7 +39,6 @@ export function PomodoroWidget() {
             
             if (mode === "focus") {
               setSessions((s) => s + 1)
-              // After 4 sessions, take a long break
               if ((sessions + 1) % 4 === 0) {
                 setMode("longBreak")
                 return DURATIONS.longBreak
@@ -84,41 +83,44 @@ export function PomodoroWidget() {
   const progress = (timeLeft / DURATIONS[mode]) * 100
 
   return (
-    <div className="h-full flex flex-col p-3">
+    <div className="h-full w-full flex flex-col p-3 overflow-hidden">
       {/* Mode Selector */}
-      <div className="flex gap-1 mb-2">
+      <div className="flex gap-1 mb-2 flex-shrink-0 flex-wrap">
         <button
           onClick={() => changeMode("focus")}
-          className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors ${
+          className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${
             mode === "focus" ? "bg-red-500/80 text-white" : "bg-white/10 text-white/60"
           }`}
+          style={{ fontSize: "clamp(0.5rem, 1.5vw, 0.625rem)" }}
         >
-          <Brain className="w-3 h-3" />
+          <Brain className="w-3 h-3 flex-shrink-0" />
           Focus
         </button>
         <button
           onClick={() => changeMode("shortBreak")}
-          className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors ${
+          className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${
             mode === "shortBreak" ? "bg-green-500/80 text-white" : "bg-white/10 text-white/60"
           }`}
+          style={{ fontSize: "clamp(0.5rem, 1.5vw, 0.625rem)" }}
         >
-          <Coffee className="w-3 h-3" />
+          <Coffee className="w-3 h-3 flex-shrink-0" />
           Short
         </button>
         <button
           onClick={() => changeMode("longBreak")}
-          className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors ${
+          className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${
             mode === "longBreak" ? "bg-blue-500/80 text-white" : "bg-white/10 text-white/60"
           }`}
+          style={{ fontSize: "clamp(0.5rem, 1.5vw, 0.625rem)" }}
         >
-          <Coffee className="w-3 h-3" />
+          <Coffee className="w-3 h-3 flex-shrink-0" />
           Long
         </button>
       </div>
 
       {/* Timer Display */}
-      <div className="flex-1 flex items-center justify-center">
-        <div className="relative">
+      <div className="flex-1 flex items-center justify-center min-h-0">
+        <div className="w-full">
           {/* Progress Bar */}
           <div className="w-full h-1 bg-white/10 rounded-full mb-2">
             <div
@@ -129,21 +131,27 @@ export function PomodoroWidget() {
             />
           </div>
 
-          <div className="text-4xl font-light text-white text-center tabular-nums">
+          <div 
+            className="font-light text-white text-center tabular-nums"
+            style={{ fontSize: "clamp(1.5rem, 6vw, 2.5rem)" }}
+          >
             {formatTime(timeLeft)}
           </div>
 
-          <div className="text-[10px] text-white/40 text-center mt-1">
+          <div 
+            className="text-white/40 text-center mt-1"
+            style={{ fontSize: "clamp(0.5rem, 1.5vw, 0.625rem)" }}
+          >
             Session {sessions + 1} / 4
           </div>
         </div>
       </div>
 
       {/* Controls */}
-      <div className="flex justify-center gap-2">
+      <div className="flex justify-center gap-2 flex-shrink-0">
         <button
           onClick={() => setIsRunning(!isRunning)}
-          className={`px-4 py-1.5 rounded-full text-xs flex items-center gap-1 transition-colors ${
+          className={`px-3 py-1.5 rounded-full flex items-center gap-1 transition-colors ${
             isRunning
               ? "bg-white/20 text-white"
               : mode === "focus"
@@ -152,6 +160,7 @@ export function PomodoroWidget() {
                   ? "bg-green-500 text-white"
                   : "bg-blue-500 text-white"
           }`}
+          style={{ fontSize: "clamp(0.6rem, 1.5vw, 0.75rem)" }}
         >
           {isRunning ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
           {isRunning ? "Pause" : "Start"}

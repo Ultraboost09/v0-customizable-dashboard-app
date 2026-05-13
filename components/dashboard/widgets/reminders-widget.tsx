@@ -61,23 +61,23 @@ export function RemindersWidget() {
   }
 
   return (
-    <div className="h-full flex flex-col p-3">
+    <div className="h-full w-full flex flex-col p-3 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded bg-blue-500 flex items-center justify-center">
+      <div className="flex items-center justify-between mb-2 flex-shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-5 h-5 rounded bg-blue-500 flex items-center justify-center flex-shrink-0">
             <Check className="w-3 h-3 text-white" />
           </div>
-          <span className="text-white font-medium text-sm">Reminders</span>
+          <span className="text-white font-medium truncate" style={{ fontSize: "clamp(0.7rem, 2vw, 0.875rem)" }}>Reminders</span>
           {completedCount > 0 && (
-            <span className="text-[10px] text-white/40 bg-white/10 px-1.5 py-0.5 rounded">
+            <span className="text-white/40 bg-white/10 px-1.5 py-0.5 rounded flex-shrink-0" style={{ fontSize: "clamp(0.5rem, 1.2vw, 0.625rem)" }}>
               {completedCount} done
             </span>
           )}
         </div>
         <button
           onClick={() => setShowAdd(!showAdd)}
-          className={`p-1 rounded transition-colors ${showAdd ? "bg-white/20" : "hover:bg-white/10"}`}
+          className={`p-1 rounded transition-colors flex-shrink-0 ${showAdd ? "bg-white/20" : "hover:bg-white/10"}`}
         >
           {showAdd ? <X className="w-4 h-4 text-white/70" /> : <Plus className="w-4 h-4 text-white/70" />}
         </button>
@@ -85,35 +85,38 @@ export function RemindersWidget() {
 
       {/* Add Task Form */}
       {showAdd && (
-        <div className="mb-2 p-2 bg-white/5 rounded-lg border border-white/10">
+        <div className="mb-2 p-2 bg-white/5 rounded-lg border border-white/10 flex-shrink-0">
           <input
             type="text"
             value={newTask}
             onChange={(e) => setNewTask(e.target.value)}
             placeholder="New reminder..."
-            className="w-full bg-transparent text-white text-xs placeholder-white/40 outline-none mb-2"
+            className="w-full bg-transparent text-white placeholder-white/40 outline-none mb-2"
+            style={{ fontSize: "clamp(0.65rem, 1.5vw, 0.75rem)" }}
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
             autoFocus
           />
           
           {/* Due Date & Time */}
           <div className="flex gap-2 mb-2">
-            <div className="flex items-center gap-1 flex-1">
-              <Calendar className="w-3 h-3 text-white/40" />
+            <div className="flex items-center gap-1 flex-1 min-w-0">
+              <Calendar className="w-3 h-3 text-white/40 flex-shrink-0" />
               <input
                 type="date"
                 value={newDueDate}
                 onChange={(e) => setNewDueDate(e.target.value)}
-                className="flex-1 bg-white/5 text-white/80 text-[10px] px-2 py-1 rounded outline-none border border-white/10"
+                className="flex-1 min-w-0 bg-white/5 text-white/80 px-2 py-1 rounded outline-none border border-white/10"
+                style={{ fontSize: "clamp(0.5rem, 1.2vw, 0.625rem)" }}
               />
             </div>
-            <div className="flex items-center gap-1 flex-1">
-              <Clock className="w-3 h-3 text-white/40" />
+            <div className="flex items-center gap-1 flex-1 min-w-0">
+              <Clock className="w-3 h-3 text-white/40 flex-shrink-0" />
               <input
                 type="time"
                 value={newDueTime}
                 onChange={(e) => setNewDueTime(e.target.value)}
-                className="flex-1 bg-white/5 text-white/80 text-[10px] px-2 py-1 rounded outline-none border border-white/10"
+                className="flex-1 min-w-0 bg-white/5 text-white/80 px-2 py-1 rounded outline-none border border-white/10"
+                style={{ fontSize: "clamp(0.5rem, 1.2vw, 0.625rem)" }}
               />
             </div>
           </div>
@@ -124,11 +127,12 @@ export function RemindersWidget() {
               <button
                 key={cat}
                 onClick={() => setNewCategory(cat)}
-                className={`text-[10px] px-2 py-0.5 rounded transition-colors ${
+                className={`px-2 py-0.5 rounded transition-colors ${
                   newCategory === cat 
                     ? "bg-blue-500 text-white" 
                     : "bg-white/10 text-white/60 hover:bg-white/20"
                 }`}
+                style={{ fontSize: "clamp(0.5rem, 1.2vw, 0.625rem)" }}
               >
                 {cat}
               </button>
@@ -138,7 +142,8 @@ export function RemindersWidget() {
           <button
             onClick={handleAdd}
             disabled={!newTask.trim()}
-            className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-blue-500/50 text-white text-xs py-1.5 rounded transition-colors"
+            className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-blue-500/50 text-white py-1.5 rounded transition-colors"
+            style={{ fontSize: "clamp(0.6rem, 1.5vw, 0.75rem)" }}
           >
             Add Reminder
           </button>
@@ -146,12 +151,12 @@ export function RemindersWidget() {
       )}
 
       {/* Tasks List */}
-      <div className="flex-1 overflow-y-auto space-y-1 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto space-y-1 scrollbar-thin min-h-0">
         {displayTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <Check className="w-6 h-6 text-white/20 mb-2" />
-            <p className="text-white/40 text-xs">No reminders</p>
-            <p className="text-white/30 text-[10px]">Tap + to add one</p>
+            <p className="text-white/40" style={{ fontSize: "clamp(0.65rem, 1.5vw, 0.75rem)" }}>No reminders</p>
+            <p className="text-white/30" style={{ fontSize: "clamp(0.5rem, 1.2vw, 0.625rem)" }}>Tap + to add one</p>
           </div>
         ) : (
           displayTasks.map((task) => (
@@ -180,28 +185,30 @@ export function RemindersWidget() {
                     onChange={(e) => setEditText(e.target.value)}
                     onBlur={() => handleEdit(task.id)}
                     onKeyDown={(e) => e.key === "Enter" && handleEdit(task.id)}
-                    className="w-full bg-transparent text-white text-xs outline-none"
+                    className="w-full bg-transparent text-white outline-none"
+                    style={{ fontSize: "clamp(0.65rem, 1.5vw, 0.75rem)" }}
                     autoFocus
                   />
                 ) : (
                   <>
                     <span
-                      className={`text-xs block truncate ${
+                      className={`block truncate ${
                         task.completed ? "line-through text-white/40" : "text-white/90"
                       }`}
+                      style={{ fontSize: "clamp(0.65rem, 1.5vw, 0.75rem)" }}
                     >
                       {task.text}
                     </span>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[9px] text-white/40 bg-white/5 px-1 py-0.5 rounded">
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span className="text-white/40 bg-white/5 px-1 py-0.5 rounded" style={{ fontSize: "clamp(0.45rem, 1vw, 0.55rem)" }}>
                         {task.category}
                       </span>
                       {task.dueDate && (
-                        <span className={`text-[9px] flex items-center gap-0.5 ${
+                        <span className={`flex items-center gap-0.5 ${
                           isOverdue(task.dueDate) && !task.completed 
                             ? "text-red-400" 
                             : "text-white/40"
-                        }`}>
+                        }`} style={{ fontSize: "clamp(0.45rem, 1vw, 0.55rem)" }}>
                           <Calendar className="w-2 h-2" />
                           {formatDueDate(task.dueDate)}
                           {task.dueTime && ` ${task.dueTime}`}
@@ -212,7 +219,7 @@ export function RemindersWidget() {
                 )}
               </div>
 
-              <div className="opacity-0 group-hover:opacity-100 flex gap-0.5 transition-opacity">
+              <div className="opacity-0 group-hover:opacity-100 flex gap-0.5 transition-opacity flex-shrink-0">
                 <button
                   onClick={() => {
                     setEditingId(task.id)
@@ -236,7 +243,7 @@ export function RemindersWidget() {
 
       {/* Footer */}
       {tasks.length > 6 && (
-        <div className="text-[10px] text-white/40 mt-1 pt-1 border-t border-white/10">
+        <div className="text-white/40 mt-1 pt-1 border-t border-white/10 flex-shrink-0" style={{ fontSize: "clamp(0.5rem, 1.2vw, 0.625rem)" }}>
           +{tasks.length - 6} more reminders
         </div>
       )}

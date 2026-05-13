@@ -123,6 +123,10 @@ interface DashboardState {
   setVolume: (vol: number) => void
   setBrightness: (bright: number) => void
 
+  // Wallpaper
+  customWallpaper: string | null
+  setCustomWallpaper: (url: string | null) => void
+
   // Sync
   loadFromSupabase: () => Promise<void>
   saveToSupabase: () => Promise<void>
@@ -399,6 +403,12 @@ export const useDashboardStore = create<DashboardState>()(
       brightness: 80,
       setVolume: (volume) => set({ volume }),
       setBrightness: (brightness) => set({ brightness }),
+
+      customWallpaper: null,
+      setCustomWallpaper: (customWallpaper) => {
+        set({ customWallpaper })
+        get().saveToSupabase()
+      },
 
       loadFromSupabase: async () => {
         const supabase = createClient()

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useDashboardStore } from "@/lib/store"
 import { Plus, X, Bell, BellOff, Trash2 } from "lucide-react"
+import { format, parse } from "date-fns"
 
 export function AlarmWidget() {
   const { alarms, addAlarm, removeAlarm, toggleAlarm } = useDashboardStore()
@@ -78,10 +79,20 @@ export function AlarmWidget() {
     }
   }
 
+  // Format time to 12-hour
+  const formatTime12Hour = (time24: string) => {
+    try {
+      const date = parse(time24, "HH:mm", new Date())
+      return format(date, "h:mm a")
+    } catch {
+      return time24
+    }
+  }
+
   const dayLabels = ["S", "M", "T", "W", "T", "F", "S"]
 
   return (
-    <div className="h-full flex flex-col p-3">
+    <div className="h-full w-full flex flex-col p-3 overflow-hidden">
       {/* Active Alarm Alert */}
       {activeAlarm && (
         <div className="absolute inset-0 bg-red-500/90 flex flex-col items-center justify-center z-10 rounded-xl animate-pulse">
@@ -99,10 +110,10 @@ export function AlarmWidget() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <Bell className="w-4 h-4 text-white/70" />
-          <span className="text-white font-medium text-sm">Alarms</span>
+          <Bell className="w-4 h-4 text-white/70 flex-shrink-0" />
+          <span className="text-white font-medium" style={{ fontSize: "clamp(0.7rem, 2vw, 0.875rem)" }}>Alarms</span>
         </div>
         <button
           onClick={() => setShowAdd(!showAdd)}
@@ -114,30 +125,33 @@ export function AlarmWidget() {
 
       {/* Add Alarm Form */}
       {showAdd && (
-        <div className="mb-2 p-2 bg-white/5 rounded">
+        <div className="mb-2 p-2 bg-white/5 rounded flex-shrink-0">
           <input
             type="time"
             value={newTime}
             onChange={(e) => setNewTime(e.target.value)}
-            className="w-full bg-white/10 text-white text-sm p-1.5 rounded outline-none mb-2"
+            className="w-full bg-white/10 text-white p-1.5 rounded outline-none mb-2"
+            style={{ fontSize: "clamp(0.65rem, 1.5vw, 0.75rem)" }}
           />
           <input
             type="text"
             value={newLabel}
             onChange={(e) => setNewLabel(e.target.value)}
             placeholder="Label (optional)"
-            className="w-full bg-transparent text-white text-xs placeholder-white/40 outline-none mb-2"
+            className="w-full bg-transparent text-white placeholder-white/40 outline-none mb-2"
+            style={{ fontSize: "clamp(0.6rem, 1.5vw, 0.75rem)" }}
           />
-          <div className="flex gap-1 mb-2">
+          <div className="flex gap-1 mb-2 flex-wrap">
             {dayLabels.map((label, i) => (
               <button
                 key={i}
                 onClick={() => toggleDay(i)}
-                className={`w-5 h-5 rounded-full text-[10px] ${
+                className={`w-5 h-5 rounded-full ${
                   selectedDays.includes(i)
                     ? "bg-blue-500 text-white"
                     : "bg-white/10 text-white/50"
                 }`}
+                style={{ fontSize: "clamp(0.5rem, 1.2vw, 0.625rem)" }}
               >
                 {label}
               </button>
@@ -145,7 +159,8 @@ export function AlarmWidget() {
           </div>
           <button
             onClick={handleAddAlarm}
-            className="w-full bg-blue-500 text-white text-xs py-1.5 rounded"
+            className="w-full bg-blue-500 text-white py-1.5 rounded"
+            style={{ fontSize: "clamp(0.6rem, 1.5vw, 0.75rem)" }}
           >
             Add Alarm
           </button>
@@ -153,23 +168,23 @@ export function AlarmWidget() {
       )}
 
       {/* Alarms List */}
-      <div className="flex-1 overflow-y-auto space-y-1">
+      <div className="flex-1 overflow-y-auto space-y-1 min-h-0">
         {alarms.length === 0 ? (
-          <div className="text-white/40 text-xs text-center py-4">
+          <div className="text-white/40 text-center py-4" style={{ fontSize: "clamp(0.6rem, 1.5vw, 0.75rem)" }}>
             No alarms set
           </div>
         ) : (
           alarms.map((alarm) => (
             <div
               key={alarm.id}
-              className={`flex items-center justify-between p-2 rounded ${
+              className={`flex items-center justify-between p-2 rounded group ${
                 alarm.enabled ? "bg-white/5" : "bg-white/[0.02]"
               }`}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <button
                   onClick={() => toggleAlarm(alarm.id)}
-                  className="p-1 rounded hover:bg-white/10"
+                  className="p-1 rounded hover:bg-white/10 flex-shrink-0"
                 >
                   {alarm.enabled ? (
                     <Bell className="w-3 h-3 text-blue-400" />
@@ -177,16 +192,19 @@ export function AlarmWidget() {
                     <BellOff className="w-3 h-3 text-white/30" />
                   )}
                 </button>
-                <div>
-                  <div className={`text-sm font-medium ${alarm.enabled ? "text-white" : "text-white/40"}`}>
-                    {alarm.time}
+                <div className="min-w-0">
+                  <div 
+                    className={`font-medium truncate ${alarm.enabled ? "text-white" : "text-white/40"}`}
+                    style={{ fontSize: "clamp(0.7rem, 2vw, 0.875rem)" }}
+                  >
+                    {formatTime12Hour(alarm.time)}
                   </div>
-                  <div className="text-[10px] text-white/40">{alarm.label}</div>
+                  <div className="text-white/40 truncate" style={{ fontSize: "clamp(0.5rem, 1.2vw, 0.625rem)" }}>{alarm.label}</div>
                 </div>
               </div>
               <button
                 onClick={() => removeAlarm(alarm.id)}
-                className="p-1 hover:bg-white/10 rounded opacity-0 group-hover:opacity-100"
+                className="p-1 hover:bg-white/10 rounded opacity-0 group-hover:opacity-100 flex-shrink-0"
               >
                 <Trash2 className="w-3 h-3 text-red-400/70" />
               </button>

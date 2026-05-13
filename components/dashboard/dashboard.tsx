@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useDashboardStore } from "@/lib/store"
 import { createClient } from "@/lib/supabase/client"
 import { RainEffect } from "./rain-effect"
@@ -21,7 +21,7 @@ import { QuickLinksWidget } from "./widgets/quicklinks-widget"
 import { SlidersWidget } from "./widgets/sliders-widget"
 import { SystemStatsWidget } from "./widgets/system-stats-widget"
 import { format } from "date-fns"
-import { LogOut, User } from "lucide-react"
+import { LogOut, User, Image as ImageIcon, Download, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 export function Dashboard() {
@@ -33,10 +33,14 @@ export function Dashboard() {
     loadFromSupabase,
     setUserId,
     setSpotifyAccessToken,
+    customWallpaper,
+    setCustomWallpaper,
   } = useDashboardStore()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [showWallpaperPicker, setShowWallpaperPicker] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
   const widgets = mode === "home" ? homeWidgets : workWidgets
@@ -74,6 +78,24 @@ export function Dashboard() {
     const supabase = createClient()
     await supabase.auth.signOut()
     router.push("/auth/login")
+  }
+
+  const handleWallpaperUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const result = e.target?.result as string
+        setCustomWallpaper(result)
+        setShowWallpaperPicker(false)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const removeWallpaper = () => {
+    setCustomWallpaper(null)
+    setShowWallpaperPicker(false)
   }
 
   if (!mounted) {
@@ -119,13 +141,17 @@ export function Dashboard() {
     }
   }
 
+  // Default wallpaper
+  const defaultWallpaper = "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80"
+  const backgroundImage = customWallpaper || defaultWallpaper
+
   return (
     <div className="fixed inset-0 overflow-hidden">
-      {/* Background Image - Misty blue mountains */}
+      {/* Background Image - Custom or default misty blue mountains */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage: `url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80')`,
+          backgroundImage: `url('${backgroundImage}')`,
         }}
       />
 
@@ -135,8 +161,8 @@ export function Dashboard() {
       {/* Rain Effect */}
       <RainEffect />
 
-      {/* Frosted glass overlay */}
-      <div className="absolute inset-0 backdrop-blur-[2px]" />
+      {/* Frosted glass overlay - more frosted */}
+      <div className="absolute inset-0 backdrop-blur-[3px]" />
 
       {/* FRIDAY Title - Exact font match from reference image */}
       <div className="absolute top-12 left-1/2 -translate-x-1/2 z-30">
@@ -154,8 +180,8 @@ export function Dashboard() {
         </h1>
       </div>
 
-      {/* User info & Sign out */}
-      <div className="absolute top-4 left-4 z-30 flex items-center gap-3">
+      {/* User info & Controls */}
+      <div className="absolute top-4 left-4 z-30 flex items-center gap-2">
         <div className="flex items-center gap-2 bg-white/10 backdrop-blur-xl rounded-full px-3 py-1.5 border border-white/20">
           <User className="w-3.5 h-3.5 text-white/70" />
           <span className="text-white/80 text-xs">{userEmail || "User"}</span>
@@ -167,7 +193,59 @@ export function Dashboard() {
           <LogOut className="w-3.5 h-3.5 text-white/70" />
           <span className="text-white/80 text-xs">Sign Out</span>
         </button>
+        <button
+          onClick={() => setShowWallpaperPicker(!showWallpaperPicker)}
+          className="flex items-center gap-1.5 bg-white/10 backdrop-blur-xl rounded-full px-3 py-1.5 border border-white/20 hover:bg-white/20 transition-colors"
+        >
+          <ImageIcon className="w-3.5 h-3.5 text-white/70" />
+          <span className="text-white/80 text-xs">Wallpaper</span>
+        </button>
+        <a
+          href="/download"
+          className="flex items-center gap-1.5 bg-blue-500/80 backdrop-blur-xl rounded-full px-3 py-1.5 border border-blue-400/30 hover:bg-blue-500 transition-colors"
+        >
+          <Download className="w-3.5 h-3.5 text-white" />
+          <span className="text-white text-xs font-medium">Get Desktop App</span>
+        </a>
       </div>
+
+      {/* Wallpaper Picker Dropdown */}
+      {showWallpaperPicker && (
+        <div className="absolute top-16 left-4 z-40 bg-gray-900/95 backdrop-blur-xl rounded-xl p-4 border border-white/20 shadow-2xl w-64">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-white font-medium text-sm">Custom Wallpaper</span>
+            <button onClick={() => setShowWallpaperPicker(false)} className="text-white/50 hover:text-white">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleWallpaperUpload}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full bg-white/10 hover:bg-white/20 text-white text-sm py-2 px-4 rounded-lg transition-colors mb-2 flex items-center justify-center gap-2"
+          >
+            <ImageIcon className="w-4 h-4" />
+            Upload from Device
+          </button>
+          {customWallpaper && (
+            <button
+              onClick={removeWallpaper}
+              className="w-full bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+            >
+              <X className="w-4 h-4" />
+              Remove Custom Wallpaper
+            </button>
+          )}
+          <p className="text-white/40 text-xs mt-3">
+            Upload any image from your device to use as your dashboard background.
+          </p>
+        </div>
+      )}
 
       {/* Mode Switcher */}
       <div className="absolute top-4 right-4 z-30">

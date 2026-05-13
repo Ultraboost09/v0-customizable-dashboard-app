@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useDashboardStore } from "@/lib/store"
-import { Play, Pause, SkipBack, SkipForward, Music, Volume2 } from "lucide-react"
+import { Play, Pause, SkipBack, SkipForward, Music, Volume2, Download, ExternalLink } from "lucide-react"
 
 interface MediaState {
   title: string
@@ -15,12 +15,32 @@ interface MediaState {
 export function MusicWidget() {
   const { nowPlaying, setNowPlaying } = useDashboardStore()
   const [localMedia, setLocalMedia] = useState<MediaState | null>(null)
+  const [visualizerBars, setVisualizerBars] = useState<number[]>(Array(12).fill(20))
+  const animationRef = useRef<number | null>(null)
 
-  // Listen for Media Session API updates (detects media playing from browser/system)
+  // Animate visualizer bars
   useEffect(() => {
-    // Check if Media Session API is available
+    const animate = () => {
+      setVisualizerBars(prev => prev.map(() => Math.random() * 100))
+      animationRef.current = requestAnimationFrame(animate)
+    }
+    
+    if (localMedia?.isPlaying || nowPlaying?.isPlaying) {
+      animate()
+    } else {
+      setVisualizerBars(Array(12).fill(20))
+    }
+    
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
+    }
+  }, [localMedia?.isPlaying, nowPlaying?.isPlaying])
+
+  // Listen for Media Session API updates
+  useEffect(() => {
     if ("mediaSession" in navigator) {
-      // Poll for media session metadata changes
       const checkMediaSession = () => {
         const session = navigator.mediaSession
         if (session.metadata) {
@@ -40,7 +60,6 @@ export function MusicWidget() {
         }
       }
 
-      // Check immediately and then poll
       checkMediaSession()
       const interval = setInterval(checkMediaSession, 1000)
 
@@ -48,24 +67,17 @@ export function MusicWidget() {
     }
   }, [setNowPlaying])
 
-  // Try to control media playback
+  // Control media playback
   const controlPlayback = async (action: "play" | "pause" | "previoustrack" | "nexttrack") => {
-    // Media Session API action handlers
-    if ("mediaSession" in navigator) {
-      // Dispatch the action - this will be handled by the media player
-      const actionHandlers = navigator.mediaSession
-      
-      // Find and click the appropriate media control if available
-      const mediaElements = document.querySelectorAll("audio, video")
-      mediaElements.forEach((element) => {
-        const media = element as HTMLMediaElement
-        if (action === "play") {
-          media.play().catch(() => {})
-        } else if (action === "pause") {
-          media.pause()
-        }
-      })
-    }
+    const mediaElements = document.querySelectorAll("audio, video")
+    mediaElements.forEach((element) => {
+      const media = element as HTMLMediaElement
+      if (action === "play") {
+        media.play().catch(() => {})
+      } else if (action === "pause") {
+        media.pause()
+      }
+    })
   }
 
   const displayData = localMedia || nowPlaying
@@ -73,28 +85,39 @@ export function MusicWidget() {
   // No media playing state
   if (!displayData) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-4">
+      <div className="h-full w-full flex flex-col items-center justify-center p-4 overflow-hidden">
         <div 
-          className="w-12 h-12 rounded-xl flex items-center justify-center mb-3"
-          style={{ background: "rgba(255,255,255,0.1)" }}
+          className="rounded-xl flex items-center justify-center mb-3"
+          style={{ 
+            background: "rgba(255,255,255,0.1)",
+            width: "clamp(40px, 10vw, 56px)",
+            height: "clamp(40px, 10vw, 56px)",
+          }}
         >
           <Music className="w-6 h-6 text-white/40" />
         </div>
-        <p className="text-white/60 text-xs font-medium">Now Playing</p>
-        <p className="text-white/30 text-[10px] mt-1 text-center">
-          Play media in your browser to see it here
+        <p className="text-white/60 font-medium" style={{ fontSize: "clamp(0.65rem, 2vw, 0.75rem)" }}>Now Playing</p>
+        <p className="text-white/30 mt-1 text-center max-w-[180px]" style={{ fontSize: "clamp(0.5rem, 1.5vw, 0.625rem)" }}>
+          Media from your browser will appear here
         </p>
         
-        {/* Demo mode with visualizer bars */}
-        <div className="flex items-end gap-0.5 mt-4 h-6">
-          {[...Array(12)].map((_, i) => (
+        {/* Hint about desktop app */}
+        <a 
+          href="/download"
+          className="mt-3 flex items-center gap-1.5 text-blue-400/70 hover:text-blue-400 transition-colors"
+          style={{ fontSize: "clamp(0.5rem, 1.5vw, 0.6rem)" }}
+        >
+          <Download className="w-3 h-3" />
+          Get desktop app for system audio
+        </a>
+        
+        {/* Idle visualizer bars */}
+        <div className="flex items-end gap-0.5 mt-3 h-5">
+          {visualizerBars.map((height, i) => (
             <div
               key={i}
-              className="w-1 bg-white/20 rounded-full"
-              style={{
-                height: `${Math.random() * 100}%`,
-                minHeight: "4px",
-              }}
+              className="w-1 bg-white/20 rounded-full transition-all duration-150"
+              style={{ height: `${height}%`, minHeight: "3px" }}
             />
           ))}
         </div>
@@ -103,12 +126,16 @@ export function MusicWidget() {
   }
 
   return (
-    <div className="h-full flex flex-col p-3">
-      <div className="flex items-center gap-3 flex-1">
+    <div className="h-full w-full flex flex-col p-3 overflow-hidden">
+      <div className="flex items-center gap-3 flex-1 min-h-0">
         {/* Album Art */}
         <div 
-          className="w-14 h-14 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center"
-          style={{ background: "rgba(255,255,255,0.1)" }}
+          className="rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center"
+          style={{ 
+            background: "rgba(255,255,255,0.1)",
+            width: "clamp(40px, 12vw, 56px)",
+            height: "clamp(40px, 12vw, 56px)",
+          }}
         >
           {displayData.artwork ? (
             <img 
@@ -124,26 +151,44 @@ export function MusicWidget() {
 
         {/* Track Info */}
         <div className="flex-1 min-w-0">
-          <div className="text-white text-sm font-medium truncate">{displayData.title}</div>
-          <div className="text-white/50 text-xs truncate">{displayData.artist}</div>
+          <div 
+            className="text-white font-medium truncate"
+            style={{ fontSize: "clamp(0.7rem, 2vw, 0.875rem)" }}
+          >
+            {displayData.title}
+          </div>
+          <div 
+            className="text-white/50 truncate"
+            style={{ fontSize: "clamp(0.6rem, 1.5vw, 0.75rem)" }}
+          >
+            {displayData.artist}
+          </div>
           {displayData.album && (
-            <div className="text-white/30 text-[10px] truncate mt-0.5">{displayData.album}</div>
+            <div 
+              className="text-white/30 truncate mt-0.5"
+              style={{ fontSize: "clamp(0.5rem, 1.2vw, 0.625rem)" }}
+            >
+              {displayData.album}
+            </div>
           )}
         </div>
 
-        {/* Playing indicator */}
+        {/* Playing indicator visualizer */}
         {displayData.isPlaying && (
-          <div className="flex items-end gap-0.5 h-4">
-            <div className="w-0.5 bg-green-400 rounded-full animate-pulse" style={{ height: "60%", animationDelay: "0ms" }} />
-            <div className="w-0.5 bg-green-400 rounded-full animate-pulse" style={{ height: "100%", animationDelay: "150ms" }} />
-            <div className="w-0.5 bg-green-400 rounded-full animate-pulse" style={{ height: "40%", animationDelay: "300ms" }} />
-            <div className="w-0.5 bg-green-400 rounded-full animate-pulse" style={{ height: "80%", animationDelay: "450ms" }} />
+          <div className="flex items-end gap-0.5 h-4 flex-shrink-0">
+            {[0, 1, 2, 3].map((i) => (
+              <div 
+                key={i}
+                className="w-0.5 bg-green-400 rounded-full transition-all duration-75"
+                style={{ height: `${visualizerBars[i] || 50}%`, minHeight: "3px" }}
+              />
+            ))}
           </div>
         )}
       </div>
 
       {/* Controls */}
-      <div className="flex items-center justify-center gap-2 mt-3 pt-2 border-t border-white/10">
+      <div className="flex items-center justify-center gap-2 mt-2 pt-2 border-t border-white/10 flex-shrink-0">
         <button 
           onClick={() => controlPlayback("previoustrack")}
           className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
@@ -152,7 +197,7 @@ export function MusicWidget() {
         </button>
         <button 
           onClick={() => controlPlayback(displayData.isPlaying ? "pause" : "play")}
-          className="p-2.5 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+          className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
         >
           {displayData.isPlaying ? (
             <Pause className="w-4 h-4 text-white" />

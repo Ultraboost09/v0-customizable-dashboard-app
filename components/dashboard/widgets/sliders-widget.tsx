@@ -7,11 +7,11 @@ export function SlidersWidget() {
   const { volume, brightness, setVolume, setBrightness } = useDashboardStore()
 
   return (
-    <div className="h-full flex items-center justify-center gap-6 p-4">
+    <div className="h-full w-full flex items-center justify-center gap-4 p-3 overflow-hidden">
       {/* Volume Slider */}
-      <div className="flex flex-col items-center gap-2">
-        <Volume2 className="w-4 h-4 text-white/60" />
-        <div className="relative h-32 w-2 bg-white/10 rounded-full">
+      <div className="flex flex-col items-center gap-2 flex-1 max-w-[50px]">
+        <Volume2 className="w-4 h-4 text-white/60 flex-shrink-0" />
+        <div className="relative w-2 bg-white/10 rounded-full flex-1 min-h-[60px] max-h-[120px]">
           <div
             className="absolute bottom-0 w-full bg-blue-500 rounded-full transition-all"
             style={{ height: `${volume}%` }}
@@ -24,14 +24,6 @@ export function SlidersWidget() {
             onChange={(e) => {
               const newVolume = parseInt(e.target.value)
               setVolume(newVolume)
-              
-              // HOOK: Connect to Electron/Tauri backend for actual volume control
-              // For Electron: ipcRenderer.send('set-volume', newVolume)
-              // For Tauri: invoke('set_volume', { volume: newVolume })
-              // Example implementation:
-              // if (window.electron) {
-              //   window.electron.ipcRenderer.send('set-volume', newVolume / 100)
-              // }
             }}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer appearance-none"
             style={{
@@ -40,13 +32,18 @@ export function SlidersWidget() {
             }}
           />
         </div>
-        <span className="text-[10px] text-white/40">{volume}%</span>
+        <span 
+          className="text-white/40 flex-shrink-0"
+          style={{ fontSize: "clamp(0.5rem, 1.5vw, 0.625rem)" }}
+        >
+          {volume}%
+        </span>
       </div>
 
       {/* Brightness Slider */}
-      <div className="flex flex-col items-center gap-2">
-        <Sun className="w-4 h-4 text-white/60" />
-        <div className="relative h-32 w-2 bg-white/10 rounded-full">
+      <div className="flex flex-col items-center gap-2 flex-1 max-w-[50px]">
+        <Sun className="w-4 h-4 text-white/60 flex-shrink-0" />
+        <div className="relative w-2 bg-white/10 rounded-full flex-1 min-h-[60px] max-h-[120px]">
           <div
             className="absolute bottom-0 w-full bg-yellow-500 rounded-full transition-all"
             style={{ height: `${brightness}%` }}
@@ -60,15 +57,7 @@ export function SlidersWidget() {
               const newBrightness = parseInt(e.target.value)
               setBrightness(newBrightness)
               
-              // HOOK: Connect to Electron/Tauri backend for actual brightness control
-              // For Electron: ipcRenderer.send('set-brightness', newBrightness)
-              // For Tauri: invoke('set_brightness', { brightness: newBrightness })
-              // Example implementation:
-              // if (window.electron) {
-              //   window.electron.ipcRenderer.send('set-brightness', newBrightness / 100)
-              // }
-              
-              // For web preview, we can simulate with CSS filter
+              // For web preview, simulate with CSS filter
               document.body.style.filter = `brightness(${0.5 + (newBrightness / 200)})`
             }}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer appearance-none"
@@ -78,7 +67,12 @@ export function SlidersWidget() {
             }}
           />
         </div>
-        <span className="text-[10px] text-white/40">{brightness}%</span>
+        <span 
+          className="text-white/40 flex-shrink-0"
+          style={{ fontSize: "clamp(0.5rem, 1.5vw, 0.625rem)" }}
+        >
+          {brightness}%
+        </span>
       </div>
     </div>
   )
