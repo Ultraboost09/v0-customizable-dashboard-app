@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useDashboardStore } from "@/lib/store"
-import { Play, Pause, SkipBack, SkipForward, Music, Volume2, Download, Disc3 } from "lucide-react"
+import { Play, Pause, SkipBack, SkipForward, Music, Volume2, Disc3 } from "lucide-react"
 
 interface MediaState {
   title: string
@@ -45,9 +45,10 @@ export function MusicWidget() {
     }
   }, [localMedia?.isPlaying, nowPlaying?.isPlaying])
 
-  // Use Electron API for now playing if available
+  // Detect and sync with media
   useEffect(() => {
     if (window.electronAPI?.isElectron) {
+      // Electron: use native APIs
       const fetchNowPlaying = async () => {
         const data = await window.electronAPI!.getNowPlaying()
         if (data) {
@@ -69,7 +70,6 @@ export function MusicWidget() {
       fetchNowPlaying()
       const interval = setInterval(fetchNowPlaying, 1000)
 
-      // Listen for media keys
       window.electronAPI.onMediaKey((key) => {
         if (key === 'playpause') {
           window.electronAPI?.mediaControl('playpause')
@@ -82,31 +82,62 @@ export function MusicWidget() {
 
       return () => clearInterval(interval)
     } else {
-      // Fallback to Media Session API for browser
-      if ("mediaSession" in navigator) {
-        const checkMediaSession = () => {
-          const session = navigator.mediaSession
-          if (session.metadata) {
-            const metadata = session.metadata
-            const newState: MediaState = {
-              title: metadata.title || "Unknown Track",
-              artist: metadata.artist || "Unknown Artist",
-              album: metadata.album || "",
-              artwork: metadata.artwork?.[0]?.src || "",
-              isPlaying: session.playbackState === "playing",
-            }
-            setLocalMedia(newState)
-            setNowPlaying({
-              ...newState,
-              isPlaying: session.playbackState === "playing",
-            })
+      // Browser: use MediaSession API + detect audio/video elements
+      const detectMedia = () => {
+        // First check MediaSession API
+        if ("mediaSession" in navigator && navigator.mediaSession.metadata) {
+          const metadata = navigator.mediaSession.metadata
+          const newState: MediaState = {
+            title: metadata.title || "Unknown Track",
+            artist: metadata.artist || "Unknown Artist",
+            album: metadata.album || "",
+            artwork: metadata.artwork?.[0]?.src || "",
+            isPlaying: navigator.mediaSession.playbackState === "playing",
           }
+          setLocalMedia(newState)
+          setNowPlaying(newState)
+          return
         }
 
-        checkMediaSession()
-        const interval = setInterval(checkMediaSession, 1000)
+        // Fallback: detect any playing audio/video elements
+        const mediaElements = document.querySelectorAll("audio, video")
+        let foundPlaying = false
+        
+        mediaElements.forEach((element) => {
+          const media = element as HTMLMediaElement
+          if (!media.paused && media.duration > 0) {
+            foundPlaying = true
+            const newState: MediaState = {
+              title: document.title || "Browser Media",
+              artist: window.location.hostname,
+              album: "",
+              artwork: "",
+              isPlaying: true,
+            }
+            setLocalMedia(newState)
+            setNowPlaying(newState)
+          }
+        })
 
-        return () => clearInterval(interval)
+        if (!foundPlaying) {
+          setLocalMedia(null)
+        }
+      }
+
+      detectMedia()
+      const interval = setInterval(detectMedia, 500)
+
+      // Listen for play/pause events on all media
+      const handlePlay = () => detectMedia()
+      const handlePause = () => detectMedia()
+      
+      document.addEventListener('play', handlePlay, true)
+      document.addEventListener('pause', handlePause, true)
+
+      return () => {
+        clearInterval(interval)
+        document.removeEventListener('play', handlePlay, true)
+        document.removeEventListener('pause', handlePause, true)
       }
     }
   }, [setNowPlaying])
@@ -116,18 +147,24 @@ export function MusicWidget() {
     if (window.electronAPI?.isElectron) {
       await window.electronAPI.mediaControl(action)
     } else {
-      // Browser fallback
+      // Browser: control all audio/video elements
       const mediaElements = document.querySelectorAll("audio, video")
       mediaElements.forEach((element) => {
         const media = element as HTMLMediaElement
-        if (action === "play" || action === "playpause") {
+        if (action === "playpause") {
           if (media.paused) {
             media.play().catch(() => {})
           } else {
             media.pause()
           }
+        } else if (action === "play") {
+          media.play().catch(() => {})
         } else if (action === "pause") {
           media.pause()
+        } else if (action === "previous") {
+          media.currentTime = 0
+        } else if (action === "next") {
+          media.currentTime = media.duration
         }
       })
     }
@@ -153,21 +190,9 @@ export function MusicWidget() {
         <p className="text-white/30 mt-1 text-center max-w-[180px]" style={{ fontSize: "clamp(0.5rem, 1.5vw, 0.625rem)" }}>
           {isElectron 
             ? "Play music in Spotify or Apple Music" 
-            : "Media from your browser will appear here"
+            : "Play audio or video in your browser"
           }
         </p>
-        
-        {/* Hint about desktop app if in browser */}
-        {!isElectron && (
-          <a 
-            href="/download"
-            className="mt-3 flex items-center gap-1.5 text-blue-400/70 hover:text-blue-400 transition-colors"
-            style={{ fontSize: "clamp(0.5rem, 1.5vw, 0.6rem)" }}
-          >
-            <Download className="w-3 h-3" />
-            Get desktop app for system audio
-          </a>
-        )}
         
         {/* Idle visualizer bars */}
         <div className="flex items-end gap-0.5 mt-3 h-5">

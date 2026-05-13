@@ -1,202 +1,53 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Download, Monitor, Apple, Check, Smartphone, Globe, Zap, Cloud, Bell, Layout, ArrowLeft } from "lucide-react"
+import { Download, Monitor, Apple, Check, Zap, Cloud, Bell, Music, Volume2, Cpu, ArrowLeft, ExternalLink, Github } from "lucide-react"
 import Link from "next/link"
 
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>
-}
-
-declare global {
-  interface WindowEventMap {
-    beforeinstallprompt: BeforeInstallPromptEvent
-  }
-}
-
 export default function DownloadPage() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
-  const [isInstalled, setIsInstalled] = useState(false)
-  const [isInstalling, setIsInstalling] = useState(false)
-  const [platform, setPlatform] = useState<"windows" | "mac" | "ios" | "android" | "other">("other")
-  const [browser, setBrowser] = useState<"chrome" | "edge" | "safari" | "firefox" | "other">("other")
+  const [platform, setPlatform] = useState<"windows" | "mac" | "other">("other")
+  const [downloading, setDownloading] = useState<string | null>(null)
 
   useEffect(() => {
     const ua = navigator.userAgent.toLowerCase()
-    
-    // Detect platform
     if (ua.includes("win")) setPlatform("windows")
-    else if (ua.includes("mac") && !ua.includes("iphone") && !ua.includes("ipad")) setPlatform("mac")
-    else if (ua.includes("iphone") || ua.includes("ipad")) setPlatform("ios")
-    else if (ua.includes("android")) setPlatform("android")
-
-    // Detect browser
-    if (ua.includes("edg/")) setBrowser("edge")
-    else if (ua.includes("chrome")) setBrowser("chrome")
-    else if (ua.includes("safari") && !ua.includes("chrome")) setBrowser("safari")
-    else if (ua.includes("firefox")) setBrowser("firefox")
-
-    // Check if already installed as PWA
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      setIsInstalled(true)
-    }
-
-    // Listen for the install prompt
-    const handleBeforeInstall = (e: BeforeInstallPromptEvent) => {
-      e.preventDefault()
-      setDeferredPrompt(e)
-    }
-
-    window.addEventListener("beforeinstallprompt", handleBeforeInstall)
-    return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstall)
+    else if (ua.includes("mac")) setPlatform("mac")
   }, [])
 
-  const handleInstall = async () => {
-    if (!deferredPrompt) return
+  const handleDownload = async (os: "mac" | "windows") => {
+    setDownloading(os)
     
-    setIsInstalling(true)
-    try {
-      await deferredPrompt.prompt()
-      const { outcome } = await deferredPrompt.userChoice
-      if (outcome === "accepted") {
-        setIsInstalled(true)
-      }
-    } finally {
-      setDeferredPrompt(null)
-      setIsInstalling(false)
+    // These would be the actual download URLs once built
+    // For now, redirect to GitHub releases
+    const downloadUrls = {
+      mac: "https://github.com/your-username/friday-dashboard/releases/latest/download/FRIDAY-mac.dmg",
+      windows: "https://github.com/your-username/friday-dashboard/releases/latest/download/FRIDAY-win.exe"
     }
+    
+    // Open download in new tab
+    window.open(downloadUrls[os], "_blank")
+    
+    setTimeout(() => setDownloading(null), 2000)
   }
 
   const features = [
-    { icon: Layout, title: "Full Dashboard", desc: "All widgets work exactly like the web" },
-    { icon: Cloud, title: "Cloud Sync", desc: "Data syncs across all your devices" },
-    { icon: Bell, title: "Notifications", desc: "Alarm and reminder alerts" },
-    { icon: Zap, title: "Instant Launch", desc: "Opens fast like a native app" },
+    { icon: Music, title: "System Now Playing", desc: "See what's playing from Spotify, Apple Music, or any app" },
+    { icon: Volume2, title: "Volume Control", desc: "Control your system volume directly from the dashboard" },
+    { icon: Cpu, title: "System Stats", desc: "Real CPU, RAM, and disk usage from your computer" },
+    { icon: Zap, title: "Media Keys", desc: "Use keyboard media keys to control playback" },
+    { icon: Cloud, title: "Cloud Sync", desc: "All your data syncs across devices automatically" },
+    { icon: Bell, title: "Native Alerts", desc: "Alarm and reminder notifications even when minimized" },
   ]
-
-  const getInstallInstructions = () => {
-    if (platform === "ios") {
-      return (
-        <ol className="space-y-3 text-white/80">
-          <li className="flex gap-3">
-            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">1</span>
-            <span>Tap the <strong>Share</strong> button at the bottom of Safari</span>
-          </li>
-          <li className="flex gap-3">
-            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">2</span>
-            <span>Scroll down and tap <strong>&quot;Add to Home Screen&quot;</strong></span>
-          </li>
-          <li className="flex gap-3">
-            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">3</span>
-            <span>Tap <strong>Add</strong> in the top right</span>
-          </li>
-        </ol>
-      )
-    }
-
-    if (platform === "android") {
-      return (
-        <ol className="space-y-3 text-white/80">
-          <li className="flex gap-3">
-            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">1</span>
-            <span>Tap the <strong>menu</strong> (three dots) in Chrome</span>
-          </li>
-          <li className="flex gap-3">
-            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">2</span>
-            <span>Tap <strong>&quot;Add to Home screen&quot;</strong></span>
-          </li>
-          <li className="flex gap-3">
-            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">3</span>
-            <span>Tap <strong>Add</strong></span>
-          </li>
-        </ol>
-      )
-    }
-
-    if (browser === "safari" && platform === "mac") {
-      return (
-        <ol className="space-y-3 text-white/80">
-          <li className="flex gap-3">
-            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">1</span>
-            <span>Click <strong>File</strong> in the menu bar</span>
-          </li>
-          <li className="flex gap-3">
-            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">2</span>
-            <span>Click <strong>&quot;Add to Dock&quot;</strong></span>
-          </li>
-          <li className="flex gap-3">
-            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">3</span>
-            <span>Click <strong>Add</strong> to install</span>
-          </li>
-        </ol>
-      )
-    }
-
-    if (browser === "chrome" || browser === "edge") {
-      return (
-        <ol className="space-y-3 text-white/80">
-          <li className="flex gap-3">
-            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">1</span>
-            <span>Look for the <strong>install icon</strong> in the address bar (right side)</span>
-          </li>
-          <li className="flex gap-3">
-            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">2</span>
-            <span>Click it and select <strong>&quot;Install&quot;</strong></span>
-          </li>
-          <li className="flex gap-3">
-            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">3</span>
-            <span>The app will open in its own window</span>
-          </li>
-        </ol>
-      )
-    }
-
-    return (
-      <ol className="space-y-3 text-white/80">
-        <li className="flex gap-3">
-          <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">1</span>
-          <span>Open the browser menu (three dots or lines)</span>
-        </li>
-        <li className="flex gap-3">
-          <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">2</span>
-          <span>Look for <strong>&quot;Install app&quot;</strong> or <strong>&quot;Add to Home Screen&quot;</strong></span>
-        </li>
-        <li className="flex gap-3">
-          <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-sm flex-shrink-0">3</span>
-          <span>Follow the prompts to install</span>
-        </li>
-      </ol>
-    )
-  }
-
-  const getPlatformIcon = () => {
-    switch (platform) {
-      case "mac": return <Apple className="w-10 h-10" />
-      case "windows": return <Monitor className="w-10 h-10" />
-      case "ios": case "android": return <Smartphone className="w-10 h-10" />
-      default: return <Globe className="w-10 h-10" />
-    }
-  }
-
-  const getPlatformName = () => {
-    switch (platform) {
-      case "mac": return "macOS"
-      case "windows": return "Windows"
-      case "ios": return "iPhone/iPad"
-      case "android": return "Android"
-      default: return "Desktop"
-    }
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1a2a4a] via-[#1e3a5f] to-[#1a2a4a] text-white">
+      {/* Background effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative z-10 max-w-2xl mx-auto px-6 py-12">
+      <div className="relative z-10 max-w-3xl mx-auto px-6 py-12">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-white/60 hover:text-white mb-8 transition-colors"
@@ -205,85 +56,166 @@ export default function DownloadPage() {
           Back to Dashboard
         </Link>
 
-        <div className="text-center mb-10">
+        {/* Header */}
+        <div className="text-center mb-12">
           <h1 
-            className="text-4xl font-light tracking-[0.3em] mb-3"
+            className="text-5xl font-light tracking-[0.3em] mb-4"
             style={{ fontFamily: "var(--font-orbitron)" }}
           >
             FRIDAY
           </h1>
-          <p className="text-white/60">Install as an app on your device</p>
+          <p className="text-xl text-white/70">Desktop App</p>
+          <p className="text-white/50 mt-2">Full system integration for the ultimate dashboard experience</p>
         </div>
 
-        {/* Main Install Card */}
-        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 mb-6 border border-white/20">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500/30 to-purple-500/30 rounded-2xl flex items-center justify-center">
-              {getPlatformIcon()}
-            </div>
-            <div>
-              <h2 className="text-xl font-medium">Install for {getPlatformName()}</h2>
-              <p className="text-white/50 text-sm">
-                {isInstalled ? "Already installed on this device" : "Free, no app store needed"}
-              </p>
-            </div>
-          </div>
-
-          {isInstalled ? (
-            <div className="flex items-center gap-3 p-4 bg-green-500/20 rounded-xl border border-green-500/30">
-              <Check className="w-6 h-6 text-green-400 flex-shrink-0" />
-              <div>
-                <p className="font-medium text-green-400">FRIDAY is installed!</p>
-                <p className="text-sm text-white/60">Find it in your apps or dock</p>
+        {/* Download Cards */}
+        <div className="grid md:grid-cols-2 gap-4 mb-10">
+          {/* macOS */}
+          <div className={`bg-white/10 backdrop-blur-xl rounded-2xl p-6 border transition-all ${
+            platform === "mac" ? "border-blue-500/50 ring-2 ring-blue-500/20" : "border-white/20"
+          }`}>
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-14 h-14 bg-gradient-to-br from-gray-600 to-gray-800 rounded-2xl flex items-center justify-center">
+                <Apple className="w-8 h-8" />
               </div>
+              <div>
+                <h2 className="text-xl font-medium">macOS</h2>
+                <p className="text-white/50 text-sm">Intel & Apple Silicon</p>
+              </div>
+              {platform === "mac" && (
+                <span className="ml-auto text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full">
+                  Your System
+                </span>
+              )}
             </div>
-          ) : deferredPrompt ? (
             <button
-              onClick={handleInstall}
-              disabled={isInstalling}
-              className="w-full py-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-xl font-medium text-lg flex items-center justify-center gap-3 transition-all disabled:opacity-50"
+              onClick={() => handleDownload("mac")}
+              disabled={downloading === "mac"}
+              className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-xl font-medium flex items-center justify-center gap-2 transition-all disabled:opacity-70"
             >
-              {isInstalling ? (
+              {downloading === "mac" ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Installing...
+                  Starting Download...
                 </>
               ) : (
                 <>
                   <Download className="w-5 h-5" />
-                  Install Now
+                  Download .dmg
                 </>
               )}
             </button>
-          ) : (
-            <div className="bg-white/5 rounded-xl p-5 border border-white/10">
-              <p className="text-white/70 text-sm mb-4 font-medium">Follow these steps:</p>
-              {getInstallInstructions()}
+            <p className="text-center text-white/40 text-xs mt-2">~85 MB</p>
+          </div>
+
+          {/* Windows */}
+          <div className={`bg-white/10 backdrop-blur-xl rounded-2xl p-6 border transition-all ${
+            platform === "windows" ? "border-blue-500/50 ring-2 ring-blue-500/20" : "border-white/20"
+          }`}>
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl flex items-center justify-center">
+                <Monitor className="w-8 h-8" />
+              </div>
+              <div>
+                <h2 className="text-xl font-medium">Windows</h2>
+                <p className="text-white/50 text-sm">Windows 10/11</p>
+              </div>
+              {platform === "windows" && (
+                <span className="ml-auto text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full">
+                  Your System
+                </span>
+              )}
             </div>
-          )}
+            <button
+              onClick={() => handleDownload("windows")}
+              disabled={downloading === "windows"}
+              className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-xl font-medium flex items-center justify-center gap-2 transition-all disabled:opacity-70"
+            >
+              {downloading === "windows" ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Starting Download...
+                </>
+              ) : (
+                <>
+                  <Download className="w-5 h-5" />
+                  Download .exe
+                </>
+              )}
+            </button>
+            <p className="text-center text-white/40 text-xs mt-2">~95 MB</p>
+          </div>
         </div>
 
-        {/* Features */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
+        {/* Features Grid */}
+        <h3 className="text-lg font-medium mb-4 text-center">Desktop App Features</h3>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-10">
           {features.map((f, i) => (
             <div key={i} className="bg-white/5 rounded-xl p-4 border border-white/10">
               <f.icon className="w-6 h-6 mb-2 text-blue-400" />
-              <h3 className="font-medium text-sm mb-0.5">{f.title}</h3>
+              <h4 className="font-medium text-sm mb-1">{f.title}</h4>
               <p className="text-xs text-white/50">{f.desc}</p>
             </div>
           ))}
         </div>
 
-        {/* Info note */}
-        <div className="bg-blue-500/10 rounded-xl p-4 border border-blue-500/20 text-center">
-          <p className="text-sm text-white/70">
-            This installs as a <strong>Progressive Web App</strong> - it works offline, 
-            syncs your data, and runs like a native application.
-          </p>
+        {/* Installation help */}
+        <div className="bg-white/5 rounded-2xl p-6 border border-white/10 mb-8">
+          <h3 className="font-medium mb-4">Installation Instructions</h3>
+          
+          <div className="space-y-4">
+            <div>
+              <h4 className="text-sm font-medium text-blue-400 mb-2">macOS</h4>
+              <ol className="text-sm text-white/70 space-y-1 list-decimal list-inside">
+                <li>Download the .dmg file</li>
+                <li>Open the downloaded file</li>
+                <li>Drag FRIDAY to your Applications folder</li>
+                <li>If blocked, go to System Preferences &gt; Security and click &quot;Open Anyway&quot;</li>
+              </ol>
+            </div>
+            
+            <div>
+              <h4 className="text-sm font-medium text-blue-400 mb-2">Windows</h4>
+              <ol className="text-sm text-white/70 space-y-1 list-decimal list-inside">
+                <li>Download the .exe file</li>
+                <li>Run the installer</li>
+                <li>If SmartScreen appears, click &quot;More info&quot; then &quot;Run anyway&quot;</li>
+                <li>FRIDAY will be added to your Start Menu</li>
+              </ol>
+            </div>
+          </div>
         </div>
 
-        <p className="text-center text-white/30 text-xs mt-8">
-          Works on Windows, macOS, Linux, iOS, and Android
+        {/* Build from source option */}
+        <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-2xl p-6 border border-white/10">
+          <div className="flex items-start gap-4">
+            <Github className="w-8 h-8 text-white/60 flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="font-medium mb-2">Build from Source</h3>
+              <p className="text-sm text-white/60 mb-4">
+                If the downloads above don&apos;t work, you can connect your project to GitHub. 
+                The app will automatically build for Windows and macOS when you push changes.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <a 
+                  href="https://vercel.com/docs/git" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm transition-colors"
+                >
+                  Connect to GitHub
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </div>
+              <p className="text-xs text-white/40 mt-3">
+                Once connected, push a tag like &quot;v1.0.0&quot; to trigger automatic builds via GitHub Actions.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-center text-white/30 text-xs mt-10">
+          FRIDAY Desktop is open source and free to use
         </p>
       </div>
     </div>
