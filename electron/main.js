@@ -44,39 +44,48 @@ ipcMain.handle('set-brightness', async (event, brightness) => {})
 ipcMain.handle('get-now-playing', async () => {
   if (process.platform === 'darwin') {
     return new Promise(resolve => {
-      // This reads from the system's internal Media Hub memory (com.apple.nowplayinginfo)
-      // This is the same source used by the Control Center and 'Boring Notch'
+      // Direct check of the macOS Media Hub defaults
       const script = `
         try
-          set rawData to do shell script "defaults read com.apple.nowplayinginfo"
-          return rawData
+          set info to do shell script "defaults read com.apple.nowplayinginfo"
+          return info
         on error
-          return "OFFLINE"
+          return "EMPTY"
         end try
       `;
       
       exec(`osascript -e '${script}'`, (err, stdout) => {
-        if (!err && stdout.trim() !== "OFFLINE") {
-          // Extract Title and Artist using Regex from the system data block
-          const titleMatch = stdout.match(/kMRMediaRemoteNowPlayingInfoTitle = "(.*?)";/);
-          const artistMatch = stdout.match(/kMRMediaRemoteNowPlayingInfoArtist = "(.*?)";/);
+        if (!err && stdout.trim() !== "EMPTY") {
+          // Look for Title and Artist in the system dump
+          const tMatch = stdout.match(/kMRMediaRemoteNowPlayingInfoTitle = "(.*?)";/);
+          const aMatch = stdout.match(/kMRMediaRemoteNowPlayingInfoArtist = "(.*?)";/);
           
-          if (titleMatch && titleMatch[1]) {
+          if (tMatch && tMatch[1]) {
             resolve({
               app: "Media",
-              title: titleMatch[1],
-              artist: artistMatch ? artistMatch[1] : "Unknown Artist",
+              title: tMatch[1],
+              artist: aMatch ? aMatch[1] : "Unknown",
               isPlaying: true
             });
           } else {
             resolve(null);
           }
         } else {
-          // Local fallback for Spotify if the system hub is idle
-          exec(`osascript -e 'if application "Spotify" is running then tell application "Spotify" to return name of current track & "|" & artist of current track'`, (e, out) => {
+          // Final fallback to checking apps directly
+          const fallback = `
+            try
+              if application "Spotify" is running then
+                tell application "Spotify" to return "Spotify|" & name of current track & "|" & artist of current track
+              else if application "Music" is running then
+                tell application "Music" to return "Music|" & name of current track & "|" & artist of current track
+              end if
+            end try
+            return ""
+          `;
+          exec(`osascript -e '${fallback}'`, (e, out) => {
             if (!e && out.trim()) {
-              const parts = out.trim().split('|');
-              resolve({ app: "Spotify", title: parts[0], artist: parts[1], isPlaying: true });
+              const p = out.trim().split('|');
+              resolve({ app: p[0], title: p[1], artist: p[2], isPlaying: true });
             } else {
               resolve(null);
             }
@@ -90,8 +99,6 @@ ipcMain.handle('get-now-playing', async () => {
 
 ipcMain.handle('media-control', async (event, action) => {
   if (process.platform === 'darwin') {
-    // Uses virtual key codes for the actual media keys on your keyboard
-    // 16 = Play/Pause, 19 = Next, 20 = Previous
     const keyCode = action === 'playpause' ? 16 : action === 'next' ? 19 : 20;
     exec(`osascript -e 'tell application "System Events" to key code ${keyCode}'`);
   }
@@ -116,7 +123,6 @@ app.whenReady().then(async () => {
       })
       mainWindow.loadURL('http://localhost:3000')
       
-      // Automatic Volume Sync
       setInterval(() => {
         if (process.platform === 'darwin' && mainWindow) {
           exec('osascript -e "output volume of (get volume settings)"', (err, stdout) => {
