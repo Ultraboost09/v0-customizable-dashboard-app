@@ -61,7 +61,6 @@ export function Dashboard() {
     setMounted(true)
   }, [setUserId, loadFromSupabase])
 
-  // Handle Spotify OAuth callback
   useEffect(() => {
     const hash = window.location.hash
     if (hash.includes("access_token")) {
@@ -259,6 +258,7 @@ export function Dashboard() {
             y={widget.y}
             width={widget.width}
             height={widget.height}
+            widgetType={widget.type}
           >
             {renderWidget(widget.type)}
           </DraggableWidget>
