@@ -41,7 +41,20 @@ interface ElectronAPI {
 
 declare global {
   interface Window {
+    // This supports your existing code
     electronAPI?: ElectronAPI
+    
+    // This supports the new volume sync and hardware controls
+    electron: {
+      getVolume: () => Promise<number>
+      setVolume: (vol: number) => Promise<void>
+      getBrightness: () => Promise<number>
+      setBrightness: (bright: number) => Promise<void>
+      getNowPlaying: () => Promise<NowPlayingInfo | null>
+      mediaControl: (action: string) => Promise<void>
+      getSystemStats: () => Promise<any>
+      onVolumeUpdate: (callback: (newVol: number) => void) => void
+    }
   }
 }
 
