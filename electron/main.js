@@ -20,11 +20,7 @@ const handle = nextApp.getRequestHandler()
 
 let mainWindow
 
-// ==========================================
 // SYSTEM HARDWARE LISTENERS
-// ==========================================
-
-// 1. Volume Control
 ipcMain.handle('get-volume', async () => {
   if (process.platform === 'darwin') {
     return new Promise(resolve => {
@@ -42,11 +38,9 @@ ipcMain.handle('set-volume', async (event, volume) => {
   }
 })
 
-// 2. Brightness (Placeholder)
 ipcMain.handle('get-brightness', async () => 80)
 ipcMain.handle('set-brightness', async (event, brightness) => {})
 
-// 3. The "Global" Now Playing Script
 ipcMain.handle('get-now-playing', async () => {
   if (process.platform === 'darwin') {
     return new Promise(resolve => {
@@ -85,7 +79,6 @@ ipcMain.handle('get-now-playing', async () => {
         if (!err && stdout && stdout.trim()) {
           const parts = stdout.trim().split('|');
           let title = parts[1];
-          // Clean up Chrome titles
           if (parts[0] === 'Chrome') {
             title = title.replace(' - YouTube', '').replace(' - Spotify', '').replace(' - SoundCloud', '');
           }
@@ -99,7 +92,6 @@ ipcMain.handle('get-now-playing', async () => {
   return null
 })
 
-// 4. Media Controls
 ipcMain.handle('media-control', async (event, action) => {
   if (process.platform === 'darwin') {
     const cmd = action === 'playpause' ? 'playpause' : action === 'next' ? 'next track' : 'previous track';
@@ -109,10 +101,7 @@ ipcMain.handle('media-control', async (event, action) => {
 
 ipcMain.handle('get-system-stats', async () => ({ cpu: 15, ram: 45 }))
 
-// ==========================================
 // APP LAUNCHER
-// ==========================================
-
 app.whenReady().then(async () => {
   try {
     await nextApp.prepare()
@@ -126,12 +115,25 @@ app.whenReady().then(async () => {
         width: 1200,
         height: 800,
         webPreferences: {
-          nodeIntegration: true,
+          nodeIntegration: false,
+          contextIsolation: true,
           preload: path.join(__dirname, 'preload.js')
         }
       })
 
       mainWindow.loadURL('http://localhost:3000')
+
+      // Sync volume with keyboard changes every 1 second
+      setInterval(() => {
+        if (process.platform === 'darwin' && mainWindow) {
+          exec('osascript -e "output volume of (get volume settings)"', (err, stdout) => {
+            if (!err) {
+              const vol = parseInt(stdout)
+              mainWindow.webContents.send('volume-update', vol)
+            }
+          })
+        }
+      }, 1000)
     })
   } catch (err) {
     dialog.showErrorBox('Server Error', err.toString())
@@ -140,7 +142,5 @@ app.whenReady().then(async () => {
 })
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
+  if (process.platform !== 'darwin') app.quit()
 })
