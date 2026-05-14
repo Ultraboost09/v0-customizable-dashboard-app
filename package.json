@@ -47,7 +47,6 @@
       "gatekeeperAssess": false
     },
     "win": {
-      "icon": "public/icon.png",
       "target": [
         {
           "target": "nsis",
@@ -61,10 +60,7 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "installerIcon": "public/icon.png",
-      "uninstallerIcon": "public/icon.png",
-      "installerHeaderIcon": "public/icon.png"
+      "allowToChangeInstallationDirectory": true
     },
     "linux": {
       "icon": "public/icon.png",
