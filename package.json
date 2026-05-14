@@ -30,8 +30,7 @@
       "public/**/*",
       "package.json",
       "next.config.mjs",
-      ".env.production",
-      "node_modules/**/*"
+      ".env.production"
     ],
     "mac": {
       "category": "public.app-category.productivity",
