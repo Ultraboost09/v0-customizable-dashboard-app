@@ -5,12 +5,14 @@ import { useState, useRef, useEffect, useCallback } from "react"
 import { useDashboardStore } from "@/lib/store"
 import { GripVertical, X, Maximize2 } from "lucide-react"
 
+// Added widgetType here to fix the TypeScript error
 interface DraggableWidgetProps {
   id: string
   x: number
   y: number
   width: number
   height: number
+  widgetType: string
   children: React.ReactNode
   className?: string
   minWidth?: number
@@ -23,6 +25,7 @@ export function DraggableWidget({
   y,
   width,
   height,
+  widgetType, // Added here as well
   children,
   className = "",
   minWidth = 120,
