@@ -1,9 +1,17 @@
 const { app, BrowserWindow, dialog } = require('electron')
-const { createServer } = require('http')
-const next = require('next')
 const path = require('path')
 
-const dev = process.env.NODE_ENV !== 'production'
+// Catch ALL fatal errors immediately so the app never closes silently
+process.on('uncaughtException', (error) => {
+  dialog.showErrorBox('Fatal App Error', error.toString())
+  app.quit()
+})
+
+const { createServer } = require('http')
+const next = require('next')
+
+// Use Electron's native package checker
+const dev = !app.isPackaged
 const nextApp = next({ dev, dir: app.getAppPath() })
 const handle = nextApp.getRequestHandler()
 
@@ -34,8 +42,7 @@ app.whenReady().then(async () => {
       mainWindow.loadURL('http://localhost:3000')
     })
   } catch (err) {
-    // If Next.js crashes, show a visible popup instead of closing silently
-    dialog.showErrorBox('Failed to start Next.js server', err.toString())
+    dialog.showErrorBox('Server Error', err.toString())
     app.quit()
   }
 })
