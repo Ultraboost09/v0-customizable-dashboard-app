@@ -12,10 +12,10 @@
     "start": "next start",
     "lint": "eslint .",
     "electron:dev": "concurrently \"cross-env NODE_ENV=development next dev\" \"wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .\"",
-    "electron:build": "electron-builder",
-    "electron:build:win": "electron-builder --win",
-    "electron:build:mac": "electron-builder --mac",
-    "electron:build:linux": "electron-builder --linux"
+    "electron:build": "next build && electron-builder",
+    "electron:build:win": "next build && electron-builder --win",
+    "electron:build:mac": "next build && electron-builder --mac",
+    "electron:build:linux": "next build && electron-builder --linux"
   },
   "build": {
     "appId": "com.friday.dashboard",
@@ -25,7 +25,7 @@
       "output": "dist-electron"
     },
     "files": [
-      "build/**/*",
+      "next-build/**/*",
       "electron/**/*",
       "public/**/*",
       "package.json",
