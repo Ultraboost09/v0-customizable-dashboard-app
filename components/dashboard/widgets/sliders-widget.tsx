@@ -7,14 +7,20 @@ import { Volume2, Sun } from "lucide-react"
 export function SlidersWidget() {
   const { volume, setVolume, brightness, setBrightness } = useDashboardStore()
 
-  // Listen for automatic volume updates from the keyboard/macOS
   useEffect(() => {
+    // Check if we are in the Electron environment
     if (typeof window !== "undefined" && window.electron?.onVolumeUpdate) {
-      window.electron.onVolumeUpdate((newVol: number) => {
+      // Start listening and save the "cleanup" function it returns
+      const removeListener = window.electron.onVolumeUpdate((newVol: number) => {
         if (newVol !== volume) {
           setVolume(newVol)
         }
       })
+
+      // This is the "Cleanup" - React runs this when the widget is removed
+      return () => {
+        if (removeListener) removeListener()
+      }
     }
   }, [setVolume, volume])
 
@@ -36,7 +42,6 @@ export function SlidersWidget() {
 
   return (
     <div className="p-4 h-full flex flex-col justify-around gap-4">
-      {/* Volume Slider */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between text-white/70">
           <Volume2 className="w-4 h-4" />
@@ -52,7 +57,6 @@ export function SlidersWidget() {
         />
       </div>
 
-      {/* Brightness Slider */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between text-white/70">
           <Sun className="w-4 h-4" />
