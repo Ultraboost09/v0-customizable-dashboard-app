@@ -141,13 +141,11 @@ export function Dashboard() {
     }
   }
 
-  // Default wallpaper
   const defaultWallpaper = "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80"
   const backgroundImage = customWallpaper || defaultWallpaper
 
   return (
     <div className="fixed inset-0 overflow-hidden">
-      {/* Background Image - Custom or default misty blue mountains */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
@@ -155,16 +153,12 @@ export function Dashboard() {
         }}
       />
 
-      {/* Dark blue overlay for dusk effect */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#1a2a4a]/50 via-[#2a3a5a]/40 to-[#1a2a4a]/70" />
 
-      {/* Rain Effect */}
       <RainEffect />
 
-      {/* Frosted glass overlay - more frosted */}
       <div className="absolute inset-0 backdrop-blur-[3px]" />
 
-      {/* FRIDAY Title - Exact font match from reference image */}
       <div className="absolute top-12 left-1/2 -translate-x-1/2 z-30">
         <h1
           className="text-white/95 font-medium select-none"
@@ -180,7 +174,6 @@ export function Dashboard() {
         </h1>
       </div>
 
-      {/* User info & Controls */}
       <div className="absolute top-4 left-4 z-30 flex items-center gap-2">
         <div className="flex items-center gap-2 bg-white/10 backdrop-blur-xl rounded-full px-3 py-1.5 border border-white/20">
           <User className="w-3.5 h-3.5 text-white/70" />
@@ -209,7 +202,6 @@ export function Dashboard() {
         </a>
       </div>
 
-      {/* Wallpaper Picker Dropdown */}
       {showWallpaperPicker && (
         <div className="absolute top-16 left-4 z-40 bg-gray-900/95 backdrop-blur-xl rounded-xl p-4 border border-white/20 shadow-2xl w-64">
           <div className="flex items-center justify-between mb-3">
@@ -247,19 +239,16 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* Mode Switcher */}
       <div className="absolute top-4 right-4 z-30">
         <ModeSwitcher onSettingsClick={() => setSettingsOpen(true)} />
       </div>
 
-      {/* Edit Mode Indicator */}
       {editMode && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 bg-blue-500/90 backdrop-blur text-white text-xs px-4 py-2 rounded-full shadow-lg">
           Edit Mode - Drag to move, corners to resize
         </div>
       )}
 
-      {/* Widgets */}
       {widgets
         .filter((widget) => widget.visible)
         .map((widget) => (
@@ -270,13 +259,11 @@ export function Dashboard() {
             y={widget.y}
             width={widget.width}
             height={widget.height}
-            widgetType={widget.type}
           >
             {renderWidget(widget.type)}
           </DraggableWidget>
         ))}
 
-      {/* Settings Modal */}
       <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   )
