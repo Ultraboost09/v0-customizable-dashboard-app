@@ -25,6 +25,7 @@
     },
     "files": [
       "electron/**/*",
+      "public/icon.png",
       "public/icons/**/*",
       "package.json"
     ],
