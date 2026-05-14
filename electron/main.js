@@ -1,5 +1,6 @@
-const { app, BrowserWindow, dialog } = require('electron')
+const { app, BrowserWindow, dialog, ipcMain } = require('electron')
 const path = require('path')
+const { exec } = require('child_process')
 
 process.on('uncaughtException', (error) => {
   dialog.showErrorBox('Fatal App Error', error.toString())
@@ -18,6 +19,108 @@ const nextApp = next({
 const handle = nextApp.getRequestHandler()
 
 let mainWindow
+
+// SYSTEM HARDWARE LISTENERS
+
+ipcMain.handle('get-volume', async () => {
+  if (process.platform === 'darwin') {
+    return new Promise(resolve => {
+      exec('osascript -e "output volume of (get volume settings)"', (err, stdout) => {
+        resolve(err ? 50 : parseInt(stdout))
+      })
+    })
+  }
+  return 50 
+})
+
+ipcMain.handle('set-volume', async (event, volume) => {
+  if (process.platform === 'darwin') {
+    exec(`osascript -e "set volume output volume ${volume}"`)
+  }
+})
+
+ipcMain.handle('get-brightness', async () => 80)
+ipcMain.handle('set-brightness', async (event, brightness) => {})
+
+ipcMain.handle('get-now-playing', async () => {
+  if (process.platform === 'darwin') {
+    return new Promise(resolve => {
+      const script = `
+        try
+          if application "Spotify" is running then
+            tell application "Spotify"
+              if player state is playing then
+                return "Spotify|" & name of current track & "|" & artist of current track & "|" & album of current track
+              end if
+            end tell
+          end if
+          if application "Music" is running then
+            tell application "Music"
+              if player state is playing then
+                return "Music|" & name of current track & "|" & artist of current track & "|" & album of current track
+              end if
+            end tell
+          end if
+          if application "VLC" is running then
+            tell application "VLC"
+              if playing then
+                return "VLC|" & name of current item & "|Local File|"
+              end if
+            end tell
+          end if
+          if application "Google Chrome" is running then
+            tell application "Google Chrome"
+              repeat with w in windows
+                repeat with t in tabs of w
+                  set tabTitle to title of t
+                  if tabTitle contains "YouTube" or tabTitle contains "SoundCloud" or tabTitle contains "Spotify" then
+                    return "Chrome|" & tabTitle & "|Browser|"
+                  end if
+                end repeat
+              end repeat
+            end tell
+          end if
+        end try
+        return ""
+      `;
+      exec(`osascript -e '${script}'`, (err, stdout) => {
+        if (!err && stdout && stdout.trim()) {
+          const parts = stdout.trim().split('|');
+          
+          // Clean up the browser title so it looks nice on the widget
+          let title = parts[1];
+          if (parts[0] === 'Chrome') {
+            title = title.replace(' - YouTube', '').replace(' - Spotify', '').replace(' - SoundCloud', '');
+          }
+
+          resolve({ app: parts[0], title: title, artist: parts[2], album: parts[3] || '', isPlaying: true });
+        } else {
+          resolve(null);
+        }
+      })
+    })
+  }
+  return null
+})
+
+ipcMain.handle('media-control', async (event, action) => {
+  if (process.platform === 'darwin') {
+    const cmd = action === 'playpause' ? 'playpause' : action === 'next' ? 'next track' : 'previous track';
+    const vlcCmd = action === 'playpause' ? 'play' : action === 'next' ? 'next' : 'previous';
+    const script = `
+      try
+        if application "Spotify" is running then tell application "Spotify" to ${cmd}
+        if application "Music" is running then tell application "Music" to ${cmd}
+        if application "VLC" is running then tell application "VLC" to ${vlcCmd}
+      end try
+    `;
+    exec(`osascript -e '${script}'`);
+  }
+})
+
+ipcMain.handle('get-system-stats', async () => ({ cpu: 15, ram: 45 }))
+
+// APP LAUNCHER
 
 app.whenReady().then(async () => {
   try {
