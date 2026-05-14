@@ -20,8 +20,11 @@ const handle = nextApp.getRequestHandler()
 
 let mainWindow
 
+// ==========================================
 // SYSTEM HARDWARE LISTENERS
+// ==========================================
 
+// 1. Volume Control
 ipcMain.handle('get-volume', async () => {
   if (process.platform === 'darwin') {
     return new Promise(resolve => {
@@ -39,9 +42,11 @@ ipcMain.handle('set-volume', async (event, volume) => {
   }
 })
 
+// 2. Brightness (Placeholder)
 ipcMain.handle('get-brightness', async () => 80)
 ipcMain.handle('set-brightness', async (event, brightness) => {})
 
+// 3. The "Global" Now Playing Script
 ipcMain.handle('get-now-playing', async () => {
   if (process.platform === 'darwin') {
     return new Promise(resolve => {
@@ -58,13 +63,6 @@ ipcMain.handle('get-now-playing', async () => {
             tell application "Music"
               if player state is playing then
                 return "Music|" & name of current track & "|" & artist of current track & "|" & album of current track
-              end if
-            end tell
-          end if
-          if application "VLC" is running then
-            tell application "VLC"
-              if playing then
-                return "VLC|" & name of current item & "|Local File|"
               end if
             end tell
           end if
@@ -86,13 +84,11 @@ ipcMain.handle('get-now-playing', async () => {
       exec(`osascript -e '${script}'`, (err, stdout) => {
         if (!err && stdout && stdout.trim()) {
           const parts = stdout.trim().split('|');
-          
-          // Clean up the browser title so it looks nice on the widget
           let title = parts[1];
+          // Clean up Chrome titles
           if (parts[0] === 'Chrome') {
             title = title.replace(' - YouTube', '').replace(' - Spotify', '').replace(' - SoundCloud', '');
           }
-
           resolve({ app: parts[0], title: title, artist: parts[2], album: parts[3] || '', isPlaying: true });
         } else {
           resolve(null);
@@ -103,24 +99,19 @@ ipcMain.handle('get-now-playing', async () => {
   return null
 })
 
+// 4. Media Controls
 ipcMain.handle('media-control', async (event, action) => {
   if (process.platform === 'darwin') {
     const cmd = action === 'playpause' ? 'playpause' : action === 'next' ? 'next track' : 'previous track';
-    const vlcCmd = action === 'playpause' ? 'play' : action === 'next' ? 'next' : 'previous';
-    const script = `
-      try
-        if application "Spotify" is running then tell application "Spotify" to ${cmd}
-        if application "Music" is running then tell application "Music" to ${cmd}
-        if application "VLC" is running then tell application "VLC" to ${vlcCmd}
-      end try
-    `;
-    exec(`osascript -e '${script}'`);
+    exec(`osascript -e 'try\n if application "Spotify" is running then tell application "Spotify" to ${cmd}\n if application "Music" is running then tell application "Music" to ${cmd}\n end try'`)
   }
 })
 
 ipcMain.handle('get-system-stats', async () => ({ cpu: 15, ram: 45 }))
 
+// ==========================================
 // APP LAUNCHER
+// ==========================================
 
 app.whenReady().then(async () => {
   try {
