@@ -58,6 +58,7 @@ export interface NowPlaying {
   album: string
   artwork: string
   isPlaying: boolean
+  app?: string // Added to resolve the TypeScript error in music-widget.tsx
 }
 
 interface DashboardState {
