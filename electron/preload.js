@@ -9,8 +9,11 @@ contextBridge.exposeInMainWorld('electron', {
   mediaControl: (action) => ipcRenderer.invoke('media-control', action),
   getSystemStats: () => ipcRenderer.invoke('get-system-stats'),
   
-  // Listen for the volume heartbeat
+  // Updated with a cleanup return
   onVolumeUpdate: (callback) => {
-    ipcRenderer.on('volume-update', (event, value) => callback(value))
+    const subscription = (event, value) => callback(value)
+    ipcRenderer.on('volume-update', subscription)
+    // Return a function to remove this specific listener later
+    return () => ipcRenderer.removeListener('volume-update', subscription)
   }
 })
