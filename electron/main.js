@@ -44,52 +44,31 @@ ipcMain.handle('set-brightness', async (event, brightness) => {})
 ipcMain.handle('get-now-playing', async () => {
   if (process.platform === 'darwin') {
     return new Promise(resolve => {
-      // This script checks the general macOS Control Center info
-      const script = `
-        try
-          tell application "System Events"
-            if exists (process "ControlCenter") then
-              -- We try to get the metadata that macOS broadcasts globally
-              set nowPlaying to do shell script "nowplaying-cli get title artist"
-              return "System|" & nowPlaying
-            end if
-          end tell
-        end try
-        
-        -- Fallback to the reliable Spotify/Music check if global fails
-        try
-          if application "Spotify" is running then
-            tell application "Spotify"
-              if player state is playing then
-                return "Spotify|" & name of current track & "|" & artist of current track
-              end if
-            end tell
-          end if
-        end try
-        return ""
-      `;
+      // This command asks the macOS system directly what is playing globally
+      // It doesn't need Chrome permission because it asks the OS, not the app
+      const cmd = "nowplaying-cli get title artist"
       
-      // Note: If nowplaying-cli isn't installed, we use a different internal command
-      exec('nowplaying-cli get title artist', (err, stdout) => {
-        if (!err && stdout.trim()) {
-          const lines = stdout.trim().split('\n');
-          resolve({ 
-            app: 'Media', 
-            title: lines[0] || 'Unknown Title', 
-            artist: lines[1] || 'Unknown Artist', 
-            isPlaying: true 
-          });
+      exec(cmd, (err, stdout) => {
+        if (!err && stdout.trim() && !stdout.includes("null")) {
+          const lines = stdout.trim().split('\n')
+          resolve({
+            app: "Media",
+            title: lines[0] || "Unknown",
+            artist: lines[1] || "Playing",
+            isPlaying: true
+          })
         } else {
-          // Final fallback for Chrome/Safari if CLI fails
-          exec(`osascript -e 'tell application "Google Chrome" to return title of active tab of front window'`, (e, out) => {
-             if (!e && out.trim()) {
-                resolve({ app: 'Chrome', title: out.trim().split(' - YouTube')[0], artist: 'Browser', isPlaying: true });
-             } else {
-                resolve(null);
-             }
-          });
+          // Fallback: Check if Spotify is specifically playing
+          exec(`osascript -e 'if application "Spotify" is running then tell application "Spotify" to return name of current track & "|" & artist of current track'`, (e, out) => {
+            if (!e && out.trim()) {
+              const parts = out.trim().split('|')
+              resolve({ app: "Spotify", title: parts[0], artist: parts[1], isPlaying: true })
+            } else {
+              resolve(null)
+            }
+          })
         }
-      });
+      })
     })
   }
   return null
@@ -97,9 +76,10 @@ ipcMain.handle('get-now-playing', async () => {
 
 ipcMain.handle('media-control', async (event, action) => {
   if (process.platform === 'darwin') {
-    // This uses the system media keys (F7, F8, F9) to control EVERYTHING
-    const keyCode = action === 'playpause' ? 16 : action === 'next' ? 19 : 20;
-    exec(`osascript -e 'tell application "System Events" to key code ${keyCode}'`);
+    // This simulates hitting the actual F7/F8/F9 keys on your keyboard
+    // It will pause Chrome, Spotify, or anything else currently active
+    const key = action === 'playpause' ? 'playpause' : action === 'next' ? 'next' : 'previous'
+    exec(`nowplaying-cli ${key}`)
   }
 })
 
