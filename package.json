@@ -25,11 +25,12 @@
       "output": "dist-electron"
     },
     "files": [
-      ".next/**/*",
+      "build/**/*",
       "electron/**/*",
       "public/**/*",
       "package.json",
       "next.config.mjs",
+      ".env.production",
       "node_modules/**/*"
     ],
     "mac": {
