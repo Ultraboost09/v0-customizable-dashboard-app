@@ -28,7 +28,9 @@
       ".next/**/*",
       "electron/**/*",
       "public/**/*",
-      "package.json"
+      "package.json",
+      "next.config.mjs",
+      "node_modules/**/*"
     ],
     "mac": {
       "category": "public.app-category.productivity",
