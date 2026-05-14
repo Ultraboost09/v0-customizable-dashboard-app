@@ -44,49 +44,52 @@ ipcMain.handle('set-brightness', async (event, brightness) => {})
 ipcMain.handle('get-now-playing', async () => {
   if (process.platform === 'darwin') {
     return new Promise(resolve => {
+      // This script checks the general macOS Control Center info
       const script = `
+        try
+          tell application "System Events"
+            if exists (process "ControlCenter") then
+              -- We try to get the metadata that macOS broadcasts globally
+              set nowPlaying to do shell script "nowplaying-cli get title artist"
+              return "System|" & nowPlaying
+            end if
+          end tell
+        end try
+        
+        -- Fallback to the reliable Spotify/Music check if global fails
         try
           if application "Spotify" is running then
             tell application "Spotify"
               if player state is playing then
-                return "Spotify|" & name of current track & "|" & artist of current track & "|" & album of current track
+                return "Spotify|" & name of current track & "|" & artist of current track
               end if
-            end tell
-          end if
-          if application "Music" is running then
-            tell application "Music"
-              if player state is playing then
-                return "Music|" & name of current track & "|" & artist of current track & "|" & album of current track
-              end if
-            end tell
-          end if
-          if application "Google Chrome" is running then
-            tell application "Google Chrome"
-              repeat with w in windows
-                repeat with t in tabs of w
-                  set tabTitle to title of t
-                  if tabTitle contains "YouTube" or tabTitle contains "SoundCloud" or tabTitle contains "Spotify" then
-                    return "Chrome|" & tabTitle & "|Browser|"
-                  end if
-                end repeat
-              end repeat
             end tell
           end if
         end try
         return ""
       `;
-      exec(`osascript -e '${script}'`, (err, stdout) => {
-        if (!err && stdout && stdout.trim()) {
-          const parts = stdout.trim().split('|');
-          let title = parts[1];
-          if (parts[0] === 'Chrome') {
-            title = title.replace(' - YouTube', '').replace(' - Spotify', '').replace(' - SoundCloud', '');
-          }
-          resolve({ app: parts[0], title: title, artist: parts[2], album: parts[3] || '', isPlaying: true });
+      
+      // Note: If nowplaying-cli isn't installed, we use a different internal command
+      exec('nowplaying-cli get title artist', (err, stdout) => {
+        if (!err && stdout.trim()) {
+          const lines = stdout.trim().split('\n');
+          resolve({ 
+            app: 'Media', 
+            title: lines[0] || 'Unknown Title', 
+            artist: lines[1] || 'Unknown Artist', 
+            isPlaying: true 
+          });
         } else {
-          resolve(null);
+          // Final fallback for Chrome/Safari if CLI fails
+          exec(`osascript -e 'tell application "Google Chrome" to return title of active tab of front window'`, (e, out) => {
+             if (!e && out.trim()) {
+                resolve({ app: 'Chrome', title: out.trim().split(' - YouTube')[0], artist: 'Browser', isPlaying: true });
+             } else {
+                resolve(null);
+             }
+          });
         }
-      })
+      });
     })
   }
   return null
@@ -94,8 +97,9 @@ ipcMain.handle('get-now-playing', async () => {
 
 ipcMain.handle('media-control', async (event, action) => {
   if (process.platform === 'darwin') {
-    const cmd = action === 'playpause' ? 'playpause' : action === 'next' ? 'next track' : 'previous track';
-    exec(`osascript -e 'try\n if application "Spotify" is running then tell application "Spotify" to ${cmd}\n if application "Music" is running then tell application "Music" to ${cmd}\n end try'`)
+    // This uses the system media keys (F7, F8, F9) to control EVERYTHING
+    const keyCode = action === 'playpause' ? 16 : action === 'next' ? 19 : 20;
+    exec(`osascript -e 'tell application "System Events" to key code ${keyCode}'`);
   }
 })
 
@@ -105,11 +109,7 @@ ipcMain.handle('get-system-stats', async () => ({ cpu: 15, ram: 45 }))
 app.whenReady().then(async () => {
   try {
     await nextApp.prepare()
-
-    const server = createServer((req, res) => {
-      handle(req, res)
-    })
-
+    const server = createServer((req, res) => { handle(req, res) })
     server.listen(3000, () => {
       mainWindow = new BrowserWindow({
         width: 1200,
@@ -120,16 +120,13 @@ app.whenReady().then(async () => {
           preload: path.join(__dirname, 'preload.js')
         }
       })
-
       mainWindow.loadURL('http://localhost:3000')
-
-      // Sync volume with keyboard changes every 1 second
+      
       setInterval(() => {
         if (process.platform === 'darwin' && mainWindow) {
           exec('osascript -e "output volume of (get volume settings)"', (err, stdout) => {
             if (!err) {
-              const vol = parseInt(stdout)
-              mainWindow.webContents.send('volume-update', vol)
+              mainWindow.webContents.send('volume-update', parseInt(stdout))
             }
           })
         }
@@ -141,6 +138,4 @@ app.whenReady().then(async () => {
   }
 })
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
-})
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
