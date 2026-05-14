@@ -8,18 +8,18 @@ export function SlidersWidget() {
   const { volume, setVolume, brightness, setBrightness } = useDashboardStore()
 
   useEffect(() => {
-    // Check if we are in the Electron environment
     if (typeof window !== "undefined" && window.electron?.onVolumeUpdate) {
-      // Start listening and save the "cleanup" function it returns
       const removeListener = window.electron.onVolumeUpdate((newVol: number) => {
         if (newVol !== volume) {
           setVolume(newVol)
         }
       })
 
-      // This is the "Cleanup" - React runs this when the widget is removed
+      // Fixes the "truthiness of void" error by checking if it's a function
       return () => {
-        if (removeListener) removeListener()
+        if (typeof removeListener === "function") {
+          removeListener()
+        }
       }
     }
   }, [setVolume, volume])
