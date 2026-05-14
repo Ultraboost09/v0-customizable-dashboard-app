@@ -20,13 +20,14 @@
   "build": {
     "appId": "com.friday.dashboard",
     "productName": "FRIDAY Dashboard",
+    "asar": false,
     "directories": {
       "output": "dist-electron"
     },
     "files": [
+      ".next/**/*",
       "electron/**/*",
-      "public/icon.png",
-      "public/icons/**/*",
+      "public/**/*",
       "package.json"
     ],
     "mac": {
