@@ -7,6 +7,7 @@ import { Volume2, Sun } from "lucide-react"
 export function SlidersWidget() {
   const { volume, setVolume, brightness, setBrightness } = useDashboardStore()
 
+  // Monitor physical hardware keyboard volume updates
   useEffect(() => {
     if (typeof window !== "undefined" && window.electron?.onVolumeUpdate) {
       const removeListener = window.electron.onVolumeUpdate((newVol: number) => {
@@ -15,7 +16,6 @@ export function SlidersWidget() {
         }
       })
 
-      // Fixes the "truthiness of void" error by checking if it's a function
       return () => {
         if (typeof removeListener === "function") {
           removeListener()
@@ -23,6 +23,15 @@ export function SlidersWidget() {
       }
     }
   }, [setVolume, volume])
+
+  // Initialize display brightness tracking parameters on component mount
+  useEffect(() => {
+    if (window.electron?.getBrightness) {
+      window.electron.getBrightness().then((initialBrightness: number) => {
+        setBrightness(initialBrightness)
+      })
+    }
+  }, [setBrightness])
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value)
@@ -42,6 +51,7 @@ export function SlidersWidget() {
 
   return (
     <div className="p-4 h-full flex flex-col justify-around gap-4">
+      {/* Volume Layout */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between text-white/70">
           <Volume2 className="w-4 h-4" />
@@ -57,6 +67,7 @@ export function SlidersWidget() {
         />
       </div>
 
+      {/* Brightness Layout */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between text-white/70">
           <Sun className="w-4 h-4" />
