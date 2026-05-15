@@ -41,93 +41,77 @@ ipcMain.handle('set-volume', async (event, volume) => {
   }
 })
 
-// Display Brightness Controller
+// Brightness Controller (Simulates Keyboard Hardware Keys)
+let currentVirtualBrightness = 80;
+
 ipcMain.handle('get-brightness', async () => {
-  if (process.platform === 'darwin') {
-    return new Promise(resolve => {
-      const script = `tell application "Image Events" to get value of property "brightness" of display 1`
-      exec(`osascript -e '${script}'`, (err, stdout) => {
-        if (!err && stdout.trim()) {
-          resolve(Math.round(parseFloat(stdout.trim()) * 100))
-        } else {
-          resolve(80) 
-        }
-      })
-    })
-  }
-  return 80
+  return currentVirtualBrightness;
 })
 
 ipcMain.handle('set-brightness', async (event, brightness) => {
   if (process.platform === 'darwin') {
-    const target = brightness / 100
-    exec(`brightness ${target}`, (err) => {
-      if (err) {
-        // Fallback to simulating brightness keys if native tool is missing
-        if (brightness > 50) {
-           exec(`osascript -e 'tell application "System Events" to key code 113'`) // Brightness Up
-        } else {
-           exec(`osascript -e 'tell application "System Events" to key code 107'`) // Brightness Down
-        }
-      }
-    })
+    const difference = brightness - currentVirtualBrightness;
+    currentVirtualBrightness = brightness;
+
+    // Key Code 145 = Brightness Up, 144 = Brightness Down (Modern MacBooks)
+    if (difference > 0) {
+       exec(`osascript -e 'tell application "System Events" to key code 145'`)
+    } else if (difference < 0) {
+       exec(`osascript -e 'tell application "System Events" to key code 144'`)
+    }
   }
 })
 
-// Now Playing Media Scanner
+// Now Playing Media Scanner (Broken into independent safe queries)
 ipcMain.handle('get-now-playing', async () => {
-  if (process.platform === 'darwin') {
-    return new Promise(resolve => {
-      const script = `
-        try
-          if application "Spotify" is running then
-            tell application "Spotify"
-              if player state is playing then
-                return "Spotify|" & name of current track & "|" & artist of current track
-              end if
-            end tell
-          end if
-        end try
+  if (process.platform !== 'darwin') return null;
 
-        try
-          if application "Music" is running then
-            tell application "Music"
-              if player state is playing then
-                return "Music|" & name of current track & "|" & artist of current track
-              end if
-            end tell
-          end if
-        end try
+  // Helper function to run scripts safely
+  const runScript = (script) => new Promise(resolve => {
+    exec(`osascript -e '${script}'`, (err, stdout) => {
+      resolve((!err && stdout.trim()) ? stdout.trim() : null);
+    });
+  });
 
-        try
-          if application "Google Chrome" is running then
-            tell application "Google Chrome"
-              set activeTabTitle to title of active tab of front window
-              if activeTabTitle contains "YouTube" or activeTabTitle contains "SoundCloud" then
-                return "Chrome|" & activeTabTitle & "|Browser"
-              end if
-            end tell
-          end if
-        end try
-
-        return "NONE"
-      `;
-      
-      exec(`osascript -e '${script}'`, (err, stdout) => {
-        if (!err && stdout && stdout.trim() !== "NONE") {
-          const parts = stdout.trim().split('|');
-          let title = parts[1];
-          if (parts[0] === 'Chrome') {
-            title = title.replace(' - YouTube', '').replace(' - SoundCloud', '');
-          }
-          resolve({ app: parts[0], title: title, artist: parts[2], isPlaying: true });
-        } else {
-          resolve(null);
-        }
-      });
-    })
+  // 1. Check Spotify
+  const spotifyScript = `if application "Spotify" is running then tell application "Spotify" to if player state is playing then return "Spotify|" & name of current track & "|" & artist of current track`;
+  let res = await runScript(spotifyScript);
+  if (res) {
+    const parts = res.split('|');
+    return { app: parts[0], title: parts[1], artist: parts[2], isPlaying: true };
   }
-  return null
+
+  // 2. Check Apple Music
+  const musicScript = `if application "Music" is running then tell application "Music" to if player state is playing then return "Music|" & name of current track & "|" & artist of current track`;
+  res = await runScript(musicScript);
+  if (res) {
+    const parts = res.split('|');
+    return { app: parts[0], title: parts[1], artist: parts[2], isPlaying: true };
+  }
+
+  // 3. Check Google Chrome (Scans ALL open tabs, not just the front one)
+  const chromeScript = `
+    if application "Google Chrome" is running then
+      tell application "Google Chrome"
+        repeat with w in windows
+          repeat with t in tabs of w
+            if title of t contains "YouTube" or title of t contains "SoundCloud" then
+              return "Chrome|" & title of t & "|Browser"
+            end if
+          end repeat
+        end repeat
+      end tell
+    end if
+    return ""
+  `;
+  res = await runScript(chromeScript);
+  if (res && res !== "") {
+    const parts = res.split('|');
+    let title = parts[1].replace(' - YouTube', '').replace(' - SoundCloud', '');
+    return { app: parts[0], title: title, artist: parts[2], isPlaying: true };
+  }
+
+  return null;
 })
 
 ipcMain.handle('media-control', async (event, action) => {
