@@ -21,10 +21,9 @@ const handle = nextApp.getRequestHandler()
 let mainWindow
 
 // ==========================================
-// SYSTEM HARDWARE LISTENERS
+// HARDWARE & MEDIA LISTENERS
 // ==========================================
 
-// 1. Volume Controls
 ipcMain.handle('get-volume', async () => {
   if (process.platform === 'darwin') {
     return new Promise(resolve => {
@@ -42,63 +41,79 @@ ipcMain.handle('set-volume', async (event, volume) => {
   }
 })
 
-// 2. Brightness Controls (Bypasses Sandbox Restrictions via System Configurations)
-ipcMain.handle('get-brightness', async () => {
-  return 80 // Safe fallback initialization baseline for standalone builds
-})
-
+// Brightness: Note on Mac - without native C++ modules, we simulate via shell
+ipcMain.handle('get-brightness', async () => 80)
 ipcMain.handle('set-brightness', async (event, brightness) => {
   if (process.platform === 'darwin') {
     const target = brightness / 100
-    // Uses standard macOS system display scripting parameters that standalone apps can safely access
-    const bScript = `
-      try
-        do shell script "brightness ${target}"
-      on error
-        tell application "System Events"
-          tell appearance preferences
-            -- Triggers system level configuration layers safely
-          end tell
-        end tell
-      end try
-    `
-    exec(`osascript -e '${bScript}'`)
+    // Try native command if installed, otherwise fail silently instead of crashing
+    exec(`brightness ${target}`, (err) => {
+      if (err) console.log("Brightness tool not found. Requires native module for true absolute slider.")
+    })
   }
 })
 
-// 3. Global Now Playing (Bypasses Sandboxed App Checks via Window Title Buffers)
+// Now Playing: Will now successfully trigger the permission popups!
 ipcMain.handle('get-now-playing', async () => {
   if (process.platform === 'darwin') {
     return new Promise(resolve => {
-      // Pulls active open window metadata from the WindowServer list which macOS leaves un-sandboxed
-      const cmd = `osascript -e 'tell application "System Events" to get title of every window of (every process whose visible is true)'`
+      const script = `
+        try
+          if application "Spotify" is running then
+            tell application "Spotify"
+              if player state is playing then
+                return "Spotify|" & name of current track & "|" & artist of current track
+              end if
+            end tell
+          end if
+        end try
+
+        try
+          if application "Music" is running then
+            tell application "Music"
+              if player state is playing then
+                return "Music|" & name of current track & "|" & artist of current track
+              end if
+            end tell
+          end if
+        end try
+
+        try
+          if application "Google Chrome" is running then
+            tell application "Google Chrome"
+              set activeTabTitle to title of active tab of front window
+              if activeTabTitle contains "YouTube" or activeTabTitle contains "SoundCloud" then
+                return "Chrome|" & activeTabTitle & "|Browser"
+              end if
+            end tell
+          end if
+        end try
+
+        return "NONE"
+      `;
       
-      exec(cmd, (err, stdout) => {
-        if (!err && stdout.trim()) {
-          // Parse the un-sandboxed window layout lists to capture active media strings
-          if (stdout.includes("YouTube")) {
-            resolve({ app: "Chrome", title: "YouTube Video", artist: "Browser Media", isPlaying: true })
-          } else if (stdout.includes("SoundCloud")) {
-            resolve({ app: "Chrome", title: "SoundCloud Audio", artist: "Browser Media", isPlaying: true })
-          } else if (stdout.includes("Spotify")) {
-            resolve({ app: "Spotify", title: "Spotify Track", artist: "Music Application", isPlaying: true })
-          } else {
-            resolve(null)
+      exec(`osascript -e '${script}'`, (err, stdout) => {
+        if (!err && stdout && stdout.trim() !== "NONE") {
+          const parts = stdout.trim().split('|');
+          let title = parts[1];
+          if (parts[0] === 'Chrome') {
+            title = title.replace(' - YouTube', '').replace(' - SoundCloud', '');
           }
+          resolve({ app: parts[0], title: title, artist: parts[2], isPlaying: true });
         } else {
-          resolve(null)
+          resolve(null);
         }
-      })
+      });
     })
   }
   return null
 })
 
-// 4. Global Media Controls
 ipcMain.handle('media-control', async (event, action) => {
   if (process.platform === 'darwin') {
-    const keyCode = action === 'playpause' ? 16 : action === 'next' ? 19 : 20
-    exec(`osascript -e 'tell application "System Events" to key code ${keyCode}'`)
+    // Triggers actual media keys via System Events (Requires Accessibility permission)
+    const keyCode = action === 'playpause' ? 16 : action === 'next' ? 19 : 20;
+    exec(`osascript -e 'tell application "System Events" to key code ${keyCode}'`);
   }
 })
 
@@ -123,7 +138,6 @@ app.whenReady().then(async () => {
       })
       mainWindow.loadURL('http://localhost:3000')
       
-      // Real-time volume sync loop
       setInterval(() => {
         if (process.platform === 'darwin' && mainWindow) {
           exec('osascript -e "output volume of (get volume settings)"', (err, stdout) => {
