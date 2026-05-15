@@ -21,7 +21,7 @@ const handle = nextApp.getRequestHandler()
 let mainWindow
 
 // ==========================================
-// HARDWARE & MEDIA LISTENERS
+// SYSTEM HARDWARE LISTENERS
 // ==========================================
 
 ipcMain.handle('get-volume', async () => {
@@ -41,19 +41,40 @@ ipcMain.handle('set-volume', async (event, volume) => {
   }
 })
 
-// Brightness: Note on Mac - without native C++ modules, we simulate via shell
-ipcMain.handle('get-brightness', async () => 80)
+// Display Brightness Controller
+ipcMain.handle('get-brightness', async () => {
+  if (process.platform === 'darwin') {
+    return new Promise(resolve => {
+      const script = `tell application "Image Events" to get value of property "brightness" of display 1`
+      exec(`osascript -e '${script}'`, (err, stdout) => {
+        if (!err && stdout.trim()) {
+          resolve(Math.round(parseFloat(stdout.trim()) * 100))
+        } else {
+          resolve(80) 
+        }
+      })
+    })
+  }
+  return 80
+})
+
 ipcMain.handle('set-brightness', async (event, brightness) => {
   if (process.platform === 'darwin') {
     const target = brightness / 100
-    // Try native command if installed, otherwise fail silently instead of crashing
     exec(`brightness ${target}`, (err) => {
-      if (err) console.log("Brightness tool not found. Requires native module for true absolute slider.")
+      if (err) {
+        // Fallback to simulating brightness keys if native tool is missing
+        if (brightness > 50) {
+           exec(`osascript -e 'tell application "System Events" to key code 113'`) // Brightness Up
+        } else {
+           exec(`osascript -e 'tell application "System Events" to key code 107'`) // Brightness Down
+        }
+      }
     })
   }
 })
 
-// Now Playing: Will now successfully trigger the permission popups!
+// Now Playing Media Scanner
 ipcMain.handle('get-now-playing', async () => {
   if (process.platform === 'darwin') {
     return new Promise(resolve => {
@@ -111,7 +132,6 @@ ipcMain.handle('get-now-playing', async () => {
 
 ipcMain.handle('media-control', async (event, action) => {
   if (process.platform === 'darwin') {
-    // Triggers actual media keys via System Events (Requires Accessibility permission)
     const keyCode = action === 'playpause' ? 16 : action === 'next' ? 19 : 20;
     exec(`osascript -e 'tell application "System Events" to key code ${keyCode}'`);
   }
